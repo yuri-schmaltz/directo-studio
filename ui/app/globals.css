@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 0 0% 100%;
+    --bg-subtle: 0 0% 98%;
+    --bg-muted: 220 14% 96%;
+    --fg: 222 47% 11%;
+    --fg-muted: 215 16% 35%;
+    --fg-subtle: 215 14% 50%;
+    --border: 220 13% 91%;
+    --ring: 180 80% 45%;
+    --accent: 180 80% 45%;
+    --accent-fg: 0 0% 100%;
+  }
+
+  .dark {
+    --bg: 222 47% 6%;
+    --bg-subtle: 222 47% 8%;
+    --bg-muted: 222 30% 12%;
+    --fg: 210 40% 98%;
+    --fg-muted: 215 20% 75%;
+    --fg-subtle: 215 16% 55%;
+    --border: 222 30% 18%;
+    --ring: 180 80% 50%;
+    --accent: 180 80% 50%;
+    --accent-fg: 0 0% 100%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    @apply h-full bg-bg text-fg;
+  }
+
+  body {
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-border bg-bg-subtle shadow-sm;
+  }
+
+  .card-pad {
+    @apply p-4 md:p-6;
+  }
+
+  .input {
+    @apply h-9 w-full rounded-md border border-border bg-bg px-3 py-1 text-sm
+           shadow-sm placeholder:text-fg-subtle
+           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1
+           focus:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md
+           text-sm font-medium transition-colors
+           focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-ring focus-visible:ring-offset-1
+           focus-visible:ring-offset-bg disabled:pointer-events-none
+           disabled:opacity-50 whitespace-nowrap;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-accent-fg hover:opacity-90 h-9 px-4;
+  }
+
+  .btn-secondary {
+    @apply btn border border-border bg-bg-subtle text-fg hover:bg-bg-muted h-9 px-4;
+  }
+
+  .btn-ghost {
+    @apply btn text-fg hover:bg-bg-muted h-9 px-3;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90 h-9 px-4;
+  }
+
+  .btn-sm {
+    @apply h-7 px-2.5 text-xs;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full border border-border
+           bg-bg-muted px-2 py-0.5 text-xs font-medium text-fg-muted;
+  }
+
+  .badge-success { @apply bg-success/10 text-success border-success/20; }
+  .badge-warning { @apply bg-warning/10 text-warning border-warning/20; }
+  .badge-danger  { @apply bg-danger/10  text-danger  border-danger/20; }
+  .badge-brand   { @apply bg-brand-500/10 text-brand-400 border-brand-500/20; }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--fg-subtle) / 0.3) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--fg-subtle) / 0.3);
+    border-radius: 3px;
+  }
+}

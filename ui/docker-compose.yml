@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  api:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - ../directo:/app
+      - directo_data:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "pip install --no-cache-dir -e . fastapi uvicorn click httpx websockets &&
+               python -m directo.platform.cli server --db-dir /data --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  ui:
+    build: .
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - DIRECTO_API_URL=http://api:8000
+      - NEXT_PUBLIC_DIRECTO_WS_URL=ws://localhost:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  directo_data:

@@ -20,9 +20,12 @@ services:
       - directo-data:/data
     environment:
       - PYTHONUNBUFFERED=1
+    # NOTE: --db-dir is a top-level (group) option of `directo.platform.cli` and
+    # MUST come before the `server` subcommand. Click otherwise rejects it with
+    # "No such option '--db-dir'". See directo/platform/cli.py: build_cli().
     command: >
       bash -c "pip install --no-cache-dir -e . fastapi uvicorn click httpx websockets streamlit &&
-               python -m directo.platform.cli server --db-dir /data --host 0.0.0.0 --port 8000"
+               python -m directo.platform.cli --db-dir /data server --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     healthcheck:

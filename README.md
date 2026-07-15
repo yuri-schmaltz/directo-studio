@@ -66,12 +66,31 @@ directo/
 ```bash
 git clone https://github.com/yuri-schmaltz/directo.git
 cd directo
-docker compose up --build
+make start          # builds, starts, waits for healthchecks, opens the browser
 ```
 
 - UI:    http://localhost:3000
 - API:   http://localhost:8000
 - Docs:  http://localhost:8000/docs
+
+> Prefer the raw command? `docker compose up --build` still works — the stack is
+> identical. `make start` just adds: detached mode + healthcheck wait + browser launch.
+
+### Day-to-day targets
+
+```bash
+make help           # list every target with a short description
+make start          # build, start, open browser
+make logs           # follow all logs
+make logs-api       # follow only API logs
+make stop           # stop containers (data is preserved)
+make restart        # restart without rebuilding
+make rebuild        # full clean rebuild
+make ps             # show running containers
+make shell-api      # bash into the API container
+make browser        # (re)open the UI in the default browser
+make prune          # ⚠ delete containers AND the SQLite volume
+```
 
 ### Local development
 

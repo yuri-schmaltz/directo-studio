@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# DBs (criados em runtime)
+*.db
+*.db-journal
+*.db.gz
+
+# Demo outputs
+demo_*_output/
+demo_output/
+*.mp4
+*.pdf
+
+# Local data
+maestro_data/
+
+# NFS stale handles (network filesystem artifacts)
+.nfs*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store

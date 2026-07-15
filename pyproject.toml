@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "directo"
+version = "1.0.0"
+description = "Directo — creative AI platform: 5 phases (stabilization, creative, scale, cinema, director, production hardening) with HTTP API, WebSocket, CLI, and Streamlit GUI. Zero required external services. From one prompt to a fully directed animatic."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Directo Team" }
+]
+keywords = ["directo", "ai", "creative", "cinema", "comfyui", "stable-diffusion", "storyboard", "director", "queue"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "loguru>=0.7.0",
+  "cryptography>=42.0.0",
+  "pillow>=10.0.0",
+  "imagehash>=4.3.1",
+  "reportlab>=4.0.0",
+  "prometheus-client>=0.19.0",
+
+
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-asyncio>=0.21.0",
+  "pytest-cov>=4.1.0",
+  "mypy>=1.5.0",
+  "ruff>=0.1.0",
+]
+otel = [
+  "opentelemetry-api>=1.21.0",
+  "opentelemetry-sdk>=1.21.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yuri-schmaltz/directo"
+Issues = "https://github.com/yuri-schmaltz/directo/issues"
+
+[tool.setuptools.packages.find]
+include = ["directo*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    "gui: Streamlit GUI tests (require streamlit)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true

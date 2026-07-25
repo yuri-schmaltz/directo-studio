@@ -29,6 +29,7 @@ from directo.director.animatic import (
     AnimaticBuilder,
     AnimaticClip,
     AnimaticProject,
+    AIVideoBackend,
     from_gallery,
 )
 
@@ -43,5 +44,5 @@ __all__ = [
     # slerp
     "LatentSpaceExplorer", "SlerpGrid",
     # animatic
-    "AnimaticBuilder", "AnimaticClip", "AnimaticProject", "from_gallery",
+    "AnimaticBuilder", "AnimaticClip", "AnimaticProject", "AIVideoBackend", "from_gallery",
 ]

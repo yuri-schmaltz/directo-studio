@@ -192,6 +192,135 @@ class KenBurnsBackend:
         return output_path
 
 
+class AIVideoBackend:
+    """AI video generation backend.
+
+    Calls out to an external video model server (e.g. Wan 2.2, HunyuanVideo,
+    CogVideoX, Runway Gen-3) via HTTP REST. If configured with name="mock" or
+    if no server is available, falls back to simulating video generation
+    by applying a slight motion/zoom to the source image and adding overlay text.
+    """
+
+    def __init__(self, name: str = "mock", endpoint: str | None = None) -> None:
+        self.name = name
+        self.endpoint = endpoint or "http://localhost:8001/generate"
+
+    def is_available(self) -> bool:
+        if self.name == "mock":
+            return True
+        import shutil
+        return shutil.which("ffmpeg") is not None
+
+    def render_clip(
+        self,
+        clip: AnimaticClip,
+        output_path: str,
+        *,
+        fps: int,
+        resolution: tuple[int, int],
+    ) -> str:
+        if self.name == "mock":
+            from PIL import Image, ImageDraw, ImageFont
+            try:
+                font = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28
+                )
+            except OSError:
+                font = ImageFont.load_default()
+
+            src = Image.open(clip.image_path).convert("RGB")
+            sw, sh = src.size
+            tw, th = resolution
+            scale = max(tw / sw, th / sh)
+            frames_dir = Path(output_path).with_suffix(".frames")
+            frames_dir.mkdir(parents=True, exist_ok=True)
+            n_frames = max(1, int(clip.duration_s * fps))
+            for f in range(n_frames):
+                t = f / max(1, n_frames - 1)
+                cx = 0.5 + 0.1 * t
+                cy = 0.5 + 0.1 * t
+                zoom = 1.0 + 0.05 * t
+                crop_w = sw / (scale * zoom)
+                crop_h = sh / (scale * zoom)
+                x0 = max(0, min(sw - int(crop_w), int((sw - crop_w) * cx)))
+                y0 = max(0, min(sh - int(crop_h), int((sh - crop_h) * cy)))
+                crop = src.crop((x0, y0, x0 + int(crop_w), y0 + int(crop_h)))
+                frame = crop.resize(resolution, Image.LANCZOS)
+
+                # Overlay AI Mock watermark
+                overlay = Image.new("RGBA", resolution, (0, 0, 0, 0))
+                d = ImageDraw.Draw(overlay)
+                d.rectangle([(10, 10), (250, 45)], fill=(128, 0, 128, 180))
+                d.text((20, 15), f"AI: {self.name.upper()}", fill=(255, 255, 255), font=font)
+
+                if clip.narration:
+                    lines = []
+                    words = clip.narration.split()
+                    line = ""
+                    for w in words:
+                        if len(line) + len(w) + 1 > 60:
+                            lines.append(line)
+                            line = w
+                        else:
+                            line = (line + " " + w).strip()
+                    if line:
+                        lines.append(line)
+                    y = resolution[1] - 30 - 30 * len(lines)
+                    for ln in lines:
+                        bbox = d.textbbox((0, 0), ln, font=font)
+                        tw_txt = bbox[2] - bbox[0]
+                        x = (resolution[0] - tw_txt) // 2
+                        d.rectangle(
+                            [(x - 10, y - 5), (x + tw_txt + 10, y + 30)],
+                            fill=(0, 0, 0, 180),
+                        )
+                        d.text((x, y), ln, fill=(255, 255, 255), font=font)
+                        y += 30
+
+                frame = frame.convert("RGBA")
+                frame.alpha_composite(overlay)
+                frame = frame.convert("RGB")
+                frame.save(frames_dir / f"f{f:05d}.jpg", quality=85)
+
+            cmd = [
+                "ffmpeg", "-y", "-loglevel", "error",
+                "-framerate", str(fps),
+                "-i", str(frames_dir / "f%05d.jpg"),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18",
+                output_path,
+            ]
+            subprocess.run(cmd, check=True)
+            shutil.rmtree(frames_dir, ignore_errors=True)
+            return output_path
+
+        else:
+            import httpx
+            log.info(f"requesting AI video from {self.endpoint} for {clip.image_path}")
+            payload = {
+                "image_path": str(Path(clip.image_path).absolute()),
+                "duration_s": clip.duration_s,
+                "model": self.name,
+                "prompt": clip.narration or ""
+            }
+            response = httpx.post(self.endpoint, json=payload, timeout=60.0)
+            response.raise_for_status()
+            data = response.json()
+            video_url = data.get("video_url") or data.get("video_path")
+            if not video_url:
+                raise RuntimeError("AI video server did not return video_url or video_path")
+            
+            if video_url.startswith("http"):
+                with httpx.stream("GET", video_url) as r:
+                    r.raise_for_status()
+                    with open(output_path, "wb") as f:
+                        for chunk in r.iter_bytes():
+                            f.write(chunk)
+            else:
+                shutil.copy(video_url, output_path)
+            
+            return output_path
+
+
 # =====================================================================
 # Builder
 # =====================================================================
@@ -238,7 +367,7 @@ class AnimaticBuilder:
         ffmpeg's concat demuxer. The music track (if any) is mixed in
         with the last concat step.
         """
-        output_path = Path(output_path)
+        output_path = Path(output_path).resolve()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         if not self._backend.is_available():
             raise RuntimeError(

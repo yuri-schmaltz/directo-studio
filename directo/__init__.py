@@ -79,7 +79,7 @@ from directo.director import (
     TemplateBackend, make_backend,
     MoodAnchor, Moodboard, MoodboardBuilder,
     LatentSpaceExplorer, SlerpGrid,
-    AnimaticBuilder, AnimaticClip, AnimaticProject, from_gallery,
+    AnimaticBuilder, AnimaticClip, AnimaticProject, AIVideoBackend, from_gallery,
 )
 
 from directo.platform import (
@@ -142,7 +142,7 @@ __all__ = [
     "TemplateBackend", "make_backend",
     "MoodAnchor", "Moodboard", "MoodboardBuilder",
     "LatentSpaceExplorer", "SlerpGrid",
-    "AnimaticBuilder", "AnimaticClip", "AnimaticProject", "from_gallery",
+    "AnimaticBuilder", "AnimaticClip", "AnimaticProject", "AIVideoBackend", "from_gallery",
     # platform (Phase 5)
     "BackupManager", "BackupResult", "MultiBackup",
     "CostKind", "CostRecord", "CostTracker", "DEFAULT_PRICES",

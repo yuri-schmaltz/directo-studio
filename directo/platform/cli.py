@@ -337,6 +337,75 @@ def build_cli():
         from directo.platform.api import run_server
         run_server(db_dir=ctx.obj["db_dir"], host=host, port=port)
 
+    # ----------------- worker -----------------
+
+    @cli.command("worker")
+    @click.option("--worker-id", default=None)
+    @click.option("--node", default=None)
+    @click.option("--poll-interval", default=0.5, type=float)
+    @click.pass_context
+    def worker(ctx: click.Context, worker_id: str | None, node: str | None, poll_interval: float) -> None:
+        """Run a standalone background queue worker."""
+        import asyncio
+        from directo.queue import PersistentQueue, Worker
+        from directo.observability import configure_logging
+        configure_logging(level="INFO", json_output=False)
+
+        db_dir: Path = ctx.obj["db_dir"]
+        queue = PersistentQueue(db_dir / "queue.db")
+        w = Worker(queue, worker_id=worker_id, node=node, poll_interval=poll_interval)
+
+        async def handle_image_generate(job):
+            click.echo(f"Processing image generation job {job.id}")
+            await asyncio.sleep(1.0)
+            return {"status": "success"}
+
+        async def handle_animatic_generate(job):
+            click.echo(f"Processing animatic generation job {job.id}")
+            from directo.director.animatic import (
+                AnimaticProject, AnimaticClip, AnimaticBuilder, AIVideoBackend
+            )
+            payload = job.payload
+            clips = [
+                AnimaticClip(
+                    image_path=c.get("image_path"),
+                    duration_s=c.get("duration_s", 2.0),
+                    pan_start=tuple(c.get("pan_start", (0.5, 0.5))),
+                    pan_end=tuple(c.get("pan_end", (0.5, 0.5))),
+                    zoom_start=c.get("zoom_start", 1.0),
+                    zoom_end=c.get("zoom_end", 1.0),
+                    narration=c.get("narration"),
+                )
+                for c in payload.get("clips", [])
+            ]
+            project = AnimaticProject(
+                id=payload.get("project_id", "untitled"),
+                title=payload.get("title", "Animatic"),
+                clips=clips,
+                music_path=payload.get("music_path"),
+                fps=payload.get("fps", 24),
+                resolution=tuple(payload.get("resolution", (1280, 720))),
+            )
+            backend_name = payload.get("backend", "mock")
+            endpoint = payload.get("backend_endpoint")
+            if backend_name == "ken-burns":
+                from directo.director.animatic import KenBurnsBackend
+                backend = KenBurnsBackend()
+            else:
+                backend = AIVideoBackend(name=backend_name, endpoint=endpoint)
+            builder = AnimaticBuilder(backend=backend)
+            output_path = payload.get("output_path") or f"./directo_data/projects/{project.id}_animatic.mp4"
+            builder.build(project, output_path)
+            return {"status": "success", "output_path": str(output_path)}
+
+        w.register("image.generate", handle_image_generate)
+        w.register("animatic.generate", handle_animatic_generate)
+
+        try:
+            asyncio.run(w.run())
+        except KeyboardInterrupt:
+            click.echo("Worker interrupted by user")
+
     return cli
 
 

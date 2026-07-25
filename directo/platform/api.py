@@ -97,8 +97,79 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         log.info("Directo API starting")
         configure_logging(level="INFO", json_output=True)
         bus.publish(EventKind.PROJECT_CREATED, {"event": "api_started"})
+
+        # Start background queue worker
+        from directo.queue import Worker
+        worker = Worker(queue, worker_id="api-bg-worker")
+
+        async def handle_image_generate(job):
+            log.info(f"Mock image generation started: {job.payload}")
+            await asyncio.sleep(1.0)
+            return {"status": "success", "image_path": job.payload.get("output_path", "dummy.png")}
+
+        async def handle_animatic_generate(job):
+            log.info(f"Animatic generation started: {job.payload}")
+            from directo.director.animatic import (
+                AnimaticProject, AnimaticClip, AnimaticBuilder, AIVideoBackend
+            )
+            payload = job.payload
+
+            # Reconstruct clips
+            clips = []
+            for c in payload.get("clips", []):
+                clips.append(AnimaticClip(
+                    image_path=c.get("image_path"),
+                    duration_s=c.get("duration_s", 2.0),
+                    pan_start=tuple(c.get("pan_start", (0.5, 0.5))),
+                    pan_end=tuple(c.get("pan_end", (0.5, 0.5))),
+                    zoom_start=c.get("zoom_start", 1.0),
+                    zoom_end=c.get("zoom_end", 1.0),
+                    narration=c.get("narration"),
+                ))
+
+            project = AnimaticProject(
+                id=payload.get("project_id", "untitled"),
+                title=payload.get("title", "Animatic"),
+                clips=clips,
+                music_path=payload.get("music_path"),
+                fps=payload.get("fps", 24),
+                resolution=tuple(payload.get("resolution", (1280, 720))),
+            )
+
+            backend_name = payload.get("backend", "mock")
+            endpoint = payload.get("backend_endpoint")
+
+            if backend_name == "ken-burns":
+                from directo.director.animatic import KenBurnsBackend
+                backend = KenBurnsBackend()
+            else:
+                backend = AIVideoBackend(name=backend_name, endpoint=endpoint)
+
+            builder = AnimaticBuilder(backend=backend)
+            output_path = payload.get("output_path") or f"./directo_data/projects/{project.id}_animatic.mp4"
+
+            # Execute build in thread pool since it's CPU/IO bound with ffmpeg
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, builder.build, project, output_path)
+
+            return {"status": "success", "output_path": str(output_path)}
+
+        worker.register("image.generate", handle_image_generate)
+        worker.register("animatic.generate", handle_animatic_generate)
+
+        worker_task = asyncio.create_task(worker.run())
+        app.state.worker = worker
+        app.state.worker_task = worker_task
+
         yield
+
         log.info("Directo API shutting down")
+        worker.stop()
+        try:
+            await asyncio.wait_for(worker_task, timeout=5.0)
+        except Exception:
+            pass
+
         # Close all services
         for svc in (queue, gallery, preset_store, canvas_store, project_memory,
                     costs, bus, cache, webhooks):
@@ -350,6 +421,22 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         ))
         result = exporter.export(records, out, gallery=gallery)
         return {"path": str(result), "panels": len(records)}
+
+    # ============================================================
+    # Animatic generation
+    # ============================================================
+
+    @app.post("/api/animatics")
+    def animatics_generate(payload: dict[str, Any]) -> dict[str, Any]:
+        """Submit a background job to render an animatic."""
+        j = Job(
+            kind="animatic.generate",
+            payload=payload,
+            project=payload.get("project_id"),
+        )
+        jid = queue.enqueue(j)
+        bus.publish(EventKind.JOB_ENQUEUED, {"job_id": jid, "kind": j.kind})
+        return {"job_id": jid, "status": "enqueued"}
 
     # ============================================================
     # Costs

@@ -89,7 +89,7 @@ def build_cli():
                   help="Directory for SQLite databases.")
     @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
     @click.pass_context
-    @click.version_option(version="1.1.1", prog_name="directo")
+    @click.version_option(version="1.1.2", prog_name="directo")
     def cli(ctx: click.Context, db_dir: str, as_json: bool) -> None:
         """Directo — production CLI for the creative AI platform."""
         ctx.ensure_object(dict)

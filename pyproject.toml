@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "directo"
-version = "1.1.1"
+version = "1.1.2"
 description = "Directo — creative AI platform: 5 phases (stabilization, creative, scale, cinema, director, production hardening) with HTTP API, WebSocket, CLI, and Streamlit GUI. Zero required external services. From one prompt to a fully directed animatic."
 readme = "README.md"
 requires-python = ">=3.11"

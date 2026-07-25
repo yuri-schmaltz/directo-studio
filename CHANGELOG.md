@@ -5,6 +5,41 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-07-25
+
+### Fixed
+
+- **`./start.sh` no longer silently reuses stale code.** Previous versions
+  only checked whether a service was already listening on its port; if it
+  was, the script printed "(skipped)" and left it alone. That was the
+  wrong default when the running service was on an older release than
+  the source the user just cloned (or pulled). Symptom: the UI sidebar
+  still said `v1.0`, the Swagger header still said `1.0.0`, but the user
+  had a fresh checkout of a newer tag.
+
+  The bring-up is now version-aware. A new `ensure_service` helper:
+
+    1. Probes the service's health URL.
+    2. Reads the `version` field from the probe response.
+    3. If the version matches what `pyproject.toml` (or
+       `ui/package.json`) declares, skip — same as before.
+    4. If the port is up but the version is different (or unreadable —
+       which is what a pre-versioning build looks like), warn, kill the
+       process on the port via `lsof`, wait one second, and start
+       fresh with the current source.
+
+  Both the backend (`/health`) and the UI (`/api/version`, a new tiny
+  route added in this release) are covered. Running the new script
+  against a stale v1.1.1 install correctly tears it down and brings
+  up v1.1.2.
+
+### Added
+
+- **`GET /api/version` on the UI** (`ui/app/api/version/route.ts`).
+  Returns `{ "name": "directo-ui", "version": "<from package.json>" }`.
+  Used by `./start.sh` for the version-mismatch check; safe to hit
+  from a browser too.
+
 ## [1.1.1] - 2026-07-25
 
 ### Fixed

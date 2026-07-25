@@ -5,6 +5,38 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-07-25
+
+### Changed
+
+- **README** (root). The Quick start now leads with the no-Docker local
+  flow (`./start.sh`) instead of `make start`. The Docker flow is
+  preserved as a clearly-labelled alternative (`./start-docker.sh` /
+  `make start-docker`). The new companion scripts (`stop.sh`,
+  `logs.sh`, `start-docker.sh`) are listed in the "What's in the box"
+  tree, the `Makefile` is shown with a local/docker target split, and
+  a "Recent updates" section links to this changelog and to the
+  GitHub releases page. The version-aware restart behaviour added in
+  v1.1.2 is now called out in the Quick start.
+- **`ui/README.md`**. Same treatment, scoped to the UI. Adds a note
+  about the `GET /api/version` route and marks
+  `ui/docker-compose.yml` as legacy in favour of the root-level
+  compose file.
+- **`ui/app/(dashboard)/page.tsx`**. The "Backend unreachable" error
+  panel's hint to pull a newer version now points at the latest tag
+  (was `v1.1.1`, now `v1.1.2` at the time of writing; updated again
+  per release as the latest tag moves).
+
+### Notes
+
+- This is a **docs-only release**. No code behaviour changed; the
+  bumped version on `pyproject.toml` / `directo/__init__.py` /
+  `directo/platform/api.py` / `directo/platform/cli.py` /
+  `ui/package.json` / `ui/package-lock.json` only affects what
+  `directo --version`, `GET /health`, and `GET /api/version` report.
+  The release tag exists so the doc refresh has a clear anchor in
+  the release history.
+
 ## [1.1.2] - 2026-07-25
 
 ### Fixed

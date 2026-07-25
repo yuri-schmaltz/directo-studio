@@ -48,7 +48,11 @@ async function forward(
   method: string,
 ) {
   const path = pathParts.join("/");
-  const url = `${BACKEND}/api/${path}${req.nextUrl.search}`;
+  // Pass-through: keep the original API path verbatim. The browser constructs
+  // `/api/proxy${path}` (e.g. `/api/proxy/health`, `/api/proxy/api/projects`)
+  // and we strip the proxy prefix below; do NOT add a hard-coded `/api/` here,
+  // otherwise top-level routes like `/health` and `/metrics` 404.
+  const url = `${BACKEND}/${path}${req.nextUrl.search}`;
 
   const headers = new Headers();
   const ct = req.headers.get("content-type");

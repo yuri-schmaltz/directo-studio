@@ -6,7 +6,9 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 
-COMPOSE       := docker compose
+# `make start` (the default) runs the **local** mode (no Docker required):
+# it builds a .venv, installs backend + UI deps, and brings both up in the
+# background. Use `make start-docker` for the original Docker flow.
 UI_URL        := http://localhost:3000
 API_URL       := http://localhost:8000
 
@@ -18,44 +20,94 @@ help: ## Show this help (default target)
 	/^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2} \
 	END {printf "\n"}' $(MAKEFILE_LIST)
 
-# ----- stack lifecycle ------------------------------------------------------
+# ----- local stack (default; no Docker) ------------------------------------
 
 .PHONY: start
-start: ## Build, start the stack and open the UI in your default browser
+start: ## Bootstrap + start the local stack (venv + node_modules + both services)
 	@./start.sh
 
 .PHONY: stop
-stop: ## Stop the stack (keeps volumes and SQLite data)
-	$(COMPOSE) down
+stop: ## Stop the local stack (keeps venv, node_modules, and SQLite data)
+	@./stop.sh
 
 .PHONY: restart
-restart: ## Restart the running containers (no rebuild)
-	$(COMPOSE) restart
-
-.PHONY: rebuild
-rebuild: ## Tear down and rebuild images from scratch
-	$(COMPOSE) down
-	$(COMPOSE) up --build -d
-
-.PHONY: ps
-ps: ## Show running containers
-	$(COMPOSE) ps
-
-# ----- logs -----------------------------------------------------------------
+restart: ## Restart the local stack
+	@./stop.sh || true
+	@./start.sh
 
 .PHONY: logs
-logs: ## Follow logs from all services (Ctrl+C to exit)
-	$(COMPOSE) logs -f --tail=100
+logs: ## Tail both local log files (Ctrl+C to exit)
+	@./logs.sh
 
 .PHONY: logs-api
-logs-api: ## Follow only the API logs
-	$(COMPOSE) logs -f --tail=100 api
+logs-api: ## Tail only the backend log
+	@tail -F .directo-backend.log
 
 .PHONY: logs-ui
-logs-ui: ## Follow only the UI logs
-	$(COMPOSE) logs -f --tail=100 ui
+logs-ui: ## Tail only the frontend log
+	@tail -F .directo-frontend.log
 
-# ----- access ---------------------------------------------------------------
+.PHONY: ps-local
+ps-local: ## Show local PIDs and which ports are bound
+	@printf 'backend  pid: ';  cat .directo-backend.pid  2>/dev/null || echo '(not running)'
+	@printf 'frontend pid: '; cat .directo-frontend.pid 2>/dev/null || echo '(not running)'
+	@command -v lsof >/dev/null 2>&1 && \
+		lsof -iTCP:8000 -sTCP:LISTEN 2>/dev/null | tail -n +2 | sed 's/^/api    /' && \
+		lsof -iTCP:3000 -sTCP:LISTEN 2>/dev/null | tail -n +2 | sed 's/^/ui     /' || true
+
+.PHONY: prune-local
+prune-local: ## ⚠ Wipe .venv, node_modules, SQLite data, pid and log files (irreversible)
+	@read -p "This will DELETE the local venv, node_modules, and SQLite data. Continue? [y/N] " ans && [ "$$ans" = "y" ] || (echo "aborted" && exit 1)
+	@./stop.sh || true
+	@rm -rf .venv ui/node_modules directo_data .directo-backend.pid .directo-frontend.pid .directo-backend.log .directo-frontend.log
+	@echo "local artefacts wiped"
+
+# ----- docker stack (alternative; requires Docker) --------------------------
+
+.PHONY: start-docker
+start-docker: ## Build, start the Docker stack and open the UI in your browser
+	@./start-docker.sh
+
+.PHONY: stop-docker
+stop-docker: ## Stop the Docker stack (keeps volumes and SQLite data)
+	docker compose down
+
+.PHONY: restart-docker
+restart-docker: ## Restart the running Docker containers (no rebuild)
+	docker compose restart
+
+.PHONY: rebuild
+rebuild: ## Tear down and rebuild Docker images from scratch
+	docker compose down
+	docker compose up --build -d
+
+.PHONY: logs-docker
+logs-docker: ## Follow Docker logs from all services
+	docker compose logs -f --tail=100
+
+.PHONY: ps
+ps: ## Show running Docker containers
+	docker compose ps
+
+.PHONY: shell-api
+shell-api: ## Open a bash shell inside the API container
+	docker compose exec api bash
+
+.PHONY: shell-ui
+shell-ui: ## Open a sh shell inside the UI container
+	docker compose exec ui sh
+
+.PHONY: clean
+clean: ## Stop Docker containers and remove the default network (keeps volumes)
+	docker compose down
+
+.PHONY: prune
+prune: ## ⚠ Stop Docker AND delete the SQLite volume (irreversible)
+	@read -p "This will DELETE all Directo Docker data. Continue? [y/N] " ans && [ "$$ans" = "y" ] || (echo "aborted" && exit 1)
+	docker compose down -v
+	docker system prune -f
+
+# ----- browser + health -----------------------------------------------------
 
 .PHONY: browser
 browser: ## Open the UI in the default browser
@@ -65,37 +117,18 @@ browser: ## Open the UI in the default browser
 		xdg-open $(UI_URL) > /dev/null 2>&1 || true; \
 	fi
 
-.PHONY: shell-api
-shell-api: ## Open a bash shell inside the API container
-	$(COMPOSE) exec api bash
-
-.PHONY: shell-ui
-shell-ui: ## Open a sh shell inside the UI container
-	$(COMPOSE) exec ui sh
-
 .PHONY: health
 health: ## Curl /health on the API
 	@curl -sS $(API_URL)/health || true
 	@echo
 
-# ----- cleanup --------------------------------------------------------------
-
-.PHONY: clean
-clean: ## Stop containers and remove the default network (keeps volumes)
-	$(COMPOSE) down
-
-.PHONY: prune
-prune: ## ⚠ Stop everything AND delete the SQLite volume (irreversible)
-	@read -p "This will DELETE all Directo data. Continue? [y/N] " ans && [ "$$ans" = "y" ] || (echo "aborted" && exit 1)
-	$(COMPOSE) down -v
-	docker system prune -f
-
 # ----- tests ----------------------------------------------------------------
 
 .PHONY: test
-test: ## Run the Python test suite (213 tests)
-	pytest -q
+test: ## Run the Python test suite (213 tests) inside the local venv
+	@if [ ! -x .venv/bin/python ]; then echo "no .venv — run \`make start\` first"; exit 1; fi
+	.venv/bin/pytest -q
 
 .PHONY: test-ui
 test-ui: ## Run the Next.js test suite inside the UI container
-	$(COMPOSE) exec ui npm test --silent
+	docker compose exec ui npm test --silent

@@ -35,12 +35,29 @@ export default function DashboardPage() {
       <Card className="card-pad">
         <CardTitle className="text-danger">Backend unreachable</CardTitle>
         <p className="text-sm text-fg-muted mt-2">
-          Could not reach the Directo API. Make sure it&apos;s running:
+          Could not reach the Directo API. The easiest way to bring the whole
+          stack up (venv, deps, backend, frontend) is:
         </p>
         <pre className="mt-3 rounded-md bg-bg-muted p-3 text-xs font-mono">
-{`cd directo
-.venv/bin/python -m directo.platform.cli server \\
-  --db-dir ./directo_data --port 8000`}
+{`# From the repo root (creates .venv, installs deps, starts both):
+./start.sh
+
+# If that does not exist yet, you are on an old checkout — pull:
+git fetch origin v1.1.1 && git checkout v1.1.1`}
+        </pre>
+        <p className="text-sm text-fg-muted mt-3">
+          Manual fallback — single line, with <code>--db-dir</code> BEFORE the
+          <code> server </code> subcommand (Click rejects it the other way):
+        </p>
+        <pre className="mt-3 rounded-md bg-bg-muted p-3 text-xs font-mono">
+{`# Linux / macOS / WSL:
+.venv/bin/python -m directo.platform.cli --db-dir ./directo_data server --port 8000
+
+# Windows (cmd / PowerShell / native):
+.venv\\Scripts\\python.exe -m directo.platform.cli --db-dir ./directo_data server --port 8000
+
+# Then in another terminal:
+cd ui && npm install && DIRECTO_API_URL=http://localhost:8000 npm run dev`}
         </pre>
       </Card>
     );

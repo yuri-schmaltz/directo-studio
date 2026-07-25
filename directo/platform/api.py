@@ -109,7 +109,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
 
     app = FastAPI(
         title="Directo API",
-        version="1.1.0",
+        version="1.1.1",
         description="Production API for the Directo creative AI platform.",
         lifespan=lifespan,
     )
@@ -130,7 +130,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     def health() -> dict[str, Any]:
         return {
             "status": "ok",
-            "version": "1.1.0",
+            "version": "1.1.1",
             "uptime": time.time(),
             "queue": queue.stats(),
             "gallery": gallery.count(),

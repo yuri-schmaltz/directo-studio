@@ -37,7 +37,7 @@ export function Sidebar() {
       <div className="flex items-center gap-2 px-4 h-14 border-b border-border">
         <Target className="h-5 w-5 text-brand-500" />
         <span className="font-semibold text-fg">Directo</span>
-        <span className="text-xs text-fg-subtle ml-auto">v1.0</span>
+        <span className="text-xs text-fg-subtle ml-auto">v1.1</span>
       </div>
       <nav className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-0.5">
         {NAV.map(({ href, label, icon: Icon }) => {

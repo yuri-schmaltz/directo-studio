@@ -5,6 +5,30 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-25
+
+### Fixed
+
+- **"Backend unreachable" error panel showed a broken command.** The text
+  inside `ui/app/(dashboard)/page.tsx` had three bugs:
+    1. `cd directo` pointed to a directory that does not exist (the repo
+       is `directo-studio`).
+    2. The venv Python path was hardcoded as `.venv/bin/python`, which
+       does not work on native Windows (the correct path there is
+       `.venv\Scripts\python.exe`).
+    3. The `\` line continuation put `--db-dir` AFTER the `server`
+       subcommand. Click parses group-level options before the
+       subcommand, so it rejected the whole thing with "No such option
+       '--db-dir'" — exactly the same trap that bit `docker-compose.yml`
+       in v1.0.1, just expressed in plain bash.
+
+  The panel now points to `./start.sh` (which sets up and runs the
+  whole stack on its own) and, as a manual fallback, shows the
+  single-line command with `--db-dir` BEFORE `server` for both Unix
+  and Windows.
+- **Sidebar version badge** was hardcoded to `v1.0` in
+  `ui/components/nav/sidebar.tsx`. Bumped to `v1.1`.
+
 ## [1.1.0] - 2026-07-25
 
 ### Added

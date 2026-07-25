@@ -25,6 +25,13 @@ demo_output/
 
 # Local data
 maestro_data/
+directo_data/
+
+# Directo local-mode runtime artifacts (logs, pid files)
+.directo-backend.log
+.directo-frontend.log
+.directo-backend.pid
+.directo-frontend.pid
 
 # NFS stale handles (network filesystem artifacts)
 .nfs*

@@ -34,39 +34,49 @@ consuming the FastAPI backend via REST and WebSocket.
 - WebSocket reconnect is handled client-side with exponential backoff.
 - All pages use Server Components by default; client interactivity only where
   needed (forms, WebSocket, charts).
+- `GET /api/version` (this app) returns the version from `package.json`; the
+  root `./start.sh` uses it together with the backend's `/health` to detect
+  when a running service is stale relative to the source and restart it.
 
 ## Quick start
 
-### Local (with the FastAPI backend already running)
+The recommended way to run the UI is via the root-level
+[`./start.sh`](../start.sh), which creates the venv, installs both
+backend and UI deps, and brings the whole stack up:
 
 ```bash
-# 1. Install deps
-npm install
-
-# 2. Make sure the FastAPI is running
-#    (from ../directo)
-#    .venv/bin/python -m directo.platform.cli server --port 8000
-
-# 3. Start the dev server
-cp .env.example .env.local
-npm run dev
-# → http://localhost:3000
-```
-
-### With Docker (recommended)
-
-From the repository root:
-
-```bash
-docker compose -f directo-ui/docker-compose.yml up --build
+# from the repo root
+./start.sh
 # → UI:   http://localhost:3000
 # → API:  http://localhost:8000
 # → Docs: http://localhost:8000/docs
 ```
 
-This builds the Next.js image, starts the FastAPI, mounts the Directo SQLite
-data into a named volume, and waits for the API to be healthy before starting
-the UI.
+If you want to run just the UI in isolation (with a backend already
+running on :8000), this directory works on its own:
+
+```bash
+# from the repo root, in a separate terminal from the backend
+cd ui
+npm install
+DIRECTO_API_URL=http://localhost:8000 npm run dev
+# → http://localhost:3000
+```
+
+### With Docker
+
+The recommended Docker flow is at the **repository root**:
+
+```bash
+# from the repo root
+make start-docker          # or: ./start-docker.sh
+# → UI:   http://localhost:3000
+# → API:  http://localhost:8000
+# → Docs: http://localhost:8000/docs
+```
+
+The `ui/docker-compose.yml` in this directory is a legacy single-service
+definition; new setups should use the root-level compose file.
 
 ## Tech stack
 
@@ -83,7 +93,7 @@ the UI.
 ## File layout
 
 ```
-directo-ui/
+ui/
 ├── app/
 │   ├── (dashboard)/         # group with sidebar layout
 │   │   ├── page.tsx         # dashboard
@@ -96,7 +106,9 @@ directo-ui/
 │   │   ├── backup/
 │   │   ├── events/
 │   │   └── about/
-│   ├── api/[...path]/       # server-side proxy
+│   ├── api/
+│   │   ├── [...path]/       # server-side proxy to the FastAPI backend
+│   │   └── version/         # GET /api/version — version probe for start.sh
 │   ├── error.tsx
 │   ├── loading.tsx
 │   ├── not-found.tsx
@@ -114,7 +126,6 @@ directo-ui/
 │   ├── types.ts             # matching API types
 │   └── utils.ts             # cn(), formatters
 ├── Dockerfile
-├── docker-compose.yml
 ├── next.config.mjs
 ├── tailwind.config.ts
 ├── tsconfig.json

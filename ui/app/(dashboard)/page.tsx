@@ -43,7 +43,7 @@ export default function DashboardPage() {
 ./start.sh
 
 # If that does not exist yet, you are on an old checkout — pull:
-git fetch origin v1.1.1 && git checkout v1.1.1`}
+git fetch origin v1.1.2 && git checkout v1.1.2`}
         </pre>
         <p className="text-sm text-fg-muted mt-3">
           Manual fallback — single line, with <code>--db-dir</code> BEFORE the

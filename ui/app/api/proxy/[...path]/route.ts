@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 // NEXT_PUBLIC_ vars are inlined at build time → always present in the bundle.
 const BACKEND =
-  process.env.NEXT_PUBLIC_DIRECTO_API_URL || "http://127.0.0.1:18000";
+  process.env.DIRECTO_API_URL ||
+  process.env.NEXT_PUBLIC_DIRECTO_API_URL ||
+  "http://127.0.0.1:8000";
 
 export async function GET(
   req: NextRequest,

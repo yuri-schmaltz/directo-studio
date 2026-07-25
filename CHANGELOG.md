@@ -5,6 +5,38 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-07-25
+
+### Added
+
+- **`directo` console script** in `pyproject.toml` (entry point
+  `[project.scripts] directo = "directo.platform.cli:main"`). After
+  `pip install -e .`, the CLI is exposed as a `directo` binary in the
+  venv. Replaces the verbose
+  `python -m directo.platform.cli <command>` invocation with the
+  standard `directo <command>`. The verbose form still works.
+- **CI smoke test job** (`local-smoke-test`) in
+  `.github/workflows/ci.yml`. Runs `bash -n` over every bootstrapper
+  (`start.sh`, `stop.sh`, `logs.sh`, `start-docker.sh`,
+  `stop-docker.sh`), exercises the new `directo` entry point
+  (`directo --version`), then runs `./start.sh` end-to-end on a clean
+  runner and probes both `/health` (backend) and `/api/version` (UI)
+  to confirm the version-aware bring-up added in v1.1.2 still works.
+  Catches regressions in the boot scripts on every PR.
+
+### Fixed
+
+- **`ui/docker-compose.yml`** (legacy single-repo compose file). The
+  api service's command was still using the v1.0.1 form
+  (`... server --db-dir /data --host 0.0.0.0 --port 8000`), which
+  Click rejects with "No such option '--db-dir'". Moved `--db-dir`
+  before the `server` subcommand, matching the root
+  `docker-compose.yml` and the v1.1.0 fix in `docker-compose.yml`.
+  Also removed the obsolete `version: "3.9"` top-level attribute
+  (same warning we cleaned up in v1.1.4 for the root compose file)
+  and fixed the volume name from `directo-data` (was inconsistently
+  hyphenated in the volumes block but referenced without quotes).
+
 ## [1.1.4] - 2026-07-25
 
 ### Changed

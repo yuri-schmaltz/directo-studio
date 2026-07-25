@@ -1,17 +1,24 @@
-version: "3.9"
+# Legacy single-repo Docker compose for the UI. Kept for backwards
+# compatibility with setups that started before the root-level
+# docker-compose.yml was added. Prefer that file for new setups:
+# it is the one wired into ./start-docker.sh, the Makefile, and the
+# release pipeline.
 
 services:
   api:
     image: python:3.11-slim
     working_dir: /app
     volumes:
-      - ../directo:/app
-      - directo_data:/data
+      - ..:/app
+      - directo-data:/data
     environment:
       - PYTHONUNBUFFERED=1
+    # NOTE: --db-dir is a top-level (group) option of `directo.platform.cli` and
+    # MUST come before the `server` subcommand. Click otherwise rejects it with
+    # "No such option '--db-dir'". See directo/platform/cli.py: build_cli().
     command: >
       bash -c "pip install --no-cache-dir -e . fastapi uvicorn click httpx websockets &&
-               python -m directo.platform.cli server --db-dir /data --host 0.0.0.0 --port 8000"
+               python -m directo.platform.cli --db-dir /data server --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     healthcheck:
@@ -32,4 +39,4 @@ services:
       - "3000:3000"
 
 volumes:
-  directo_data:
+  directo-data:

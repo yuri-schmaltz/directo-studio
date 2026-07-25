@@ -152,6 +152,9 @@ python3 -m venv .venv
 # Click group option, not a subcommand option. Put it after `server`
 # and Click rejects it with "No such option '--db-dir'".
 .venv/bin/python -m directo.platform.cli --db-dir ./directo_data server --port 8000
+# or, equivalently, using the `directo` console script installed by
+# `pip install -e .`:
+.venv/bin/directo --db-dir ./directo_data server --port 8000
 # in another terminal:
 
 # 2. Frontend
@@ -166,11 +169,22 @@ else is identical.
 
 ## CLI quick tour
 
+After `pip install -e .`, the CLI is exposed as a `directo` binary
+in the venv — no need to type the verbose `python -m directo.platform.cli`
+form:
+
+```bash
+.venv/bin/directo --version
+.venv/bin/directo status --db-dir ./directo_data
+.venv/bin/directo gallery list --limit 5
+.venv/bin/directo cinema "a knight with a smartphone" --era 1400-1500
+.venv/bin/directo backup queue
+```
+
+The verbose form still works if you prefer it:
+
 ```bash
 .venv/bin/python -m directo.platform.cli status --db-dir ./directo_data
-.venv/bin/python -m directo.platform.cli gallery list --limit 5
-.venv/bin/python -m directo.platform.cli cinema "a knight with a smartphone" --era 1400-1500
-.venv/bin/python -m directo.platform.cli backup queue
 ```
 
 ## Features

@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Directo unified stack — single command to spin up everything
 #
 #   docker compose up --build

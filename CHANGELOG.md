@@ -5,6 +5,40 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-07-25
+
+### Changed
+
+- **`docker-compose.yml`**: removed the obsolete top-level
+  `version: "3.9"` attribute. Docker Compose v2 ignores it and
+  prints a warning; the field has been a no-op since Compose
+  Spec (2020). Drops one warning on every `docker compose` invocation.
+- **`start-docker.sh`**: three quality-of-life fixes that were all
+  visible in a single repro of the Docker flow:
+    1. **buildx fallback.** Detect `docker buildx version` once at
+       startup; if missing, set `COMPOSE_BAKE=false` so the build
+       falls back to the classic builder. Hosts that have buildx are
+       unaffected. Suppresses the
+       `Docker Compose is configured to build using Bake, but
+       buildx isn't installed` warning.
+    2. **Pre-flight `docker compose down --remove-orphans`.** Cleans
+       up half-stopped containers from a previous run before starting
+       the new one. Prevents weird "container name already in use"
+       errors when the user interrupted a previous boot.
+    3. **Pre-flight port check on 3000 and 8000.** Fails FAST with a
+       specific "this is what's holding the port" message if either
+       port is bound by something we don't manage — instead of
+       waiting 78s for the build to fail with
+       `Bind for 0.0.0.0:8000 failed: port is already allocated`.
+       Uses `lsof` if available, falls back to `ss`.
+
+### Added
+
+- **`stop-docker.sh`** (new). Symmetric companion to
+  `start-docker.sh`. Runs `docker compose down` so users who never
+  touch the Makefile still have a clean way to stop the stack.
+  The named SQLite volume is preserved (same as `make stop-docker`).
+
 ## [1.1.3] - 2026-07-25
 
 ### Changed

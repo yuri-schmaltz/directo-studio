@@ -7,14 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FolderKanban, Plus } from "lucide-react";
+import { FolderKanban, Plus, Trash2 } from "lucide-react";
 
 export default function ProjectsPage() {
-  const { data } = useSWR<{ items: Array<{ id: string; name: string; concept: string }> }>(
+  const { data, mutate } = useSWR<{ items: Array<{ id: string; name: string; concept: string }> }>(
     "/api/proxy/projects",
     swrFetcher
   );
   const projects = data?.items || [];
+
+  async function handleDelete(projectId: string) {
+    if (!confirm("Are you sure you want to delete this project?")) return;
+    try {
+      const res = await fetch(`/api/proxy/projects/${projectId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        mutate();
+      }
+    } catch (err) {
+      console.error("Failed to delete project", err);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -49,8 +63,16 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((p) => (
             <Card key={p.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{p.name}</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base font-semibold">{p.name}</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-fg-muted hover:text-danger hover:bg-danger/10"
+                  onClick={() => handleDelete(p.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-fg-muted">{p.concept}</p>

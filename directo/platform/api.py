@@ -393,6 +393,14 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
             raise HTTPException(404, "project not found")
         return p
 
+    @app.delete("/api/projects/{project_id}")
+    def projects_delete(project_id: str) -> dict[str, Any]:
+        p = project_memory.get_project(project_id)
+        if not p:
+            raise HTTPException(404, "project not found")
+        project_memory.delete_project(project_id)
+        return {"deleted": True}
+
     @app.post("/api/projects/{project_id}/enrich-prompt")
     def projects_enrich(project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         result = director.enrich_prompt(

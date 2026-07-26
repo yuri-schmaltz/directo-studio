@@ -20,6 +20,8 @@ services:
       - directo-data:/data
     environment:
       - PYTHONUNBUFFERED=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # NOTE: --db-dir is a top-level (group) option of `directo.platform.cli` and
     # MUST come before the `server` subcommand. Click otherwise rejects it with
     # "No such option '--db-dir'". See directo/platform/cli.py: build_cli().

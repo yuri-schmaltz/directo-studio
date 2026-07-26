@@ -45,6 +45,7 @@ from directo.cinema import (
 from directo.director import (
     CreativeDirector, ProjectMemory, TemplateBackend,
 )
+from directo.director.backends import make_backend
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import MetricsCollector, configure_logging, get_logger
 from directo.platform.backup import BackupManager
@@ -85,7 +86,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     project_memory = ProjectMemory(db_dir / "memory.db")
     cinema_engine = CinemaEngine()
     prompt_enhancer = PromptEnhancer(provider="auto")
-    director = CreativeDirector(project_memory, TemplateBackend())
+    director = CreativeDirector(project_memory, make_backend())
     metrics = MetricsCollector()
     costs = CostTracker(db_dir / "costs.db")
     bus = EventBus(db_path=db_dir / "events.db")

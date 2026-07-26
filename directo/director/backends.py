@@ -131,9 +131,9 @@ class OllamaBackend:
 
     name = "ollama"
 
-    def __init__(self, *, model: str = "llama3.1",
+    def __init__(self, *, model: str | None = None,
                  base_url: str | None = None) -> None:
-        self._model = model
+        self._model = model or os.environ.get("OLLAMA_MODEL", "llama3.1")
         self._base_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
     def is_available(self) -> bool:

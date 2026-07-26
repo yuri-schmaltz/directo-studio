@@ -18,6 +18,7 @@ const MOBILE_NAV = [
   { href: "/costs", label: "Costs" },
   { href: "/backup", label: "Backup" },
   { href: "/events", label: "Live Events" },
+  { href: "/settings", label: "Settings" },
   { href: "/about", label: "About" },
 ];
 

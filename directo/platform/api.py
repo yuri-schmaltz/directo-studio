@@ -45,7 +45,7 @@ from directo.cinema import (
 from directo.director import (
     CreativeDirector, ProjectMemory, TemplateBackend,
 )
-from directo.director.backends import make_backend
+from directo.director.backends import make_backend, DynamicLLMBackend
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import MetricsCollector, configure_logging, get_logger
 from directo.platform.backup import BackupManager
@@ -86,7 +86,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     project_memory = ProjectMemory(db_dir / "memory.db")
     cinema_engine = CinemaEngine()
     prompt_enhancer = PromptEnhancer(provider="auto")
-    director = CreativeDirector(project_memory, make_backend())
+    director = CreativeDirector(project_memory, DynamicLLMBackend(db_dir / "settings.json"))
     metrics = MetricsCollector()
     costs = CostTracker(db_dir / "costs.db")
     bus = EventBus(db_path=db_dir / "events.db")
@@ -540,6 +540,35 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
             pass
         except Exception as exc:  # noqa: BLE001
             log.warning(f"websocket error: {exc}")
+
+    @app.get("/api/settings")
+    def settings_get() -> dict[str, Any]:
+        import json
+        p = db_dir / "settings.json"
+        if p.exists():
+            try:
+                with open(p) as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return {
+            "llm_backend": "template",
+            "ollama_host": "http://localhost:11434",
+            "ollama_model": "llama3.1",
+            "openai_api_base": "",
+            "openai_api_key": "",
+            "openai_model": "gpt-4o-mini",
+            "anthropic_api_key": "",
+            "anthropic_model": "claude-3-5-sonnet-20241022",
+        }
+
+    @app.post("/api/settings")
+    def settings_save(payload: dict[str, Any]) -> dict[str, Any]:
+        import json
+        p = db_dir / "settings.json"
+        with open(p, "w") as f:
+            json.dump(payload, f, indent=2)
+        return {"saved": True}
 
     return app
 

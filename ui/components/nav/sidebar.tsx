@@ -16,6 +16,7 @@ import {
   Info,
   Target,
   Film,
+  Settings,
 } from "lucide-react";
 
 const NAV = [
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/costs", label: "Costs", icon: DollarSign },
   { href: "/backup", label: "Backup", icon: Database },
   { href: "/events", label: "Live Events", icon: Radio },
+  { href: "/settings", label: "Settings", icon: Settings },
   { href: "/about", label: "About", icon: Info },
 ] as const;
 

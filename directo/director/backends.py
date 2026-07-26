@@ -199,3 +199,46 @@ def make_backend(prefer: str | None = None, **kwargs: Any) -> Any:
             log.info(f"using LLM backend: {b.name}")
             return b
     return TemplateBackend()
+
+
+class DynamicLLMBackend:
+    """An LLM backend that forwards calls to the current configured backend in settings.json."""
+    name = "dynamic"
+
+    def __init__(self, settings_path: str = "./directo_data/settings.json") -> None:
+        self._settings_path = settings_path
+
+    def _get_backend(self) -> Any:
+        import json
+        from pathlib import Path
+        try:
+            p = Path(self._settings_path)
+            if p.exists():
+                with open(p) as f:
+                    settings = json.load(f)
+                b_name = settings.get("llm_backend", "template")
+                if b_name == "ollama":
+                    return OllamaBackend(
+                        model=settings.get("ollama_model", "llama3.1"),
+                        base_url=settings.get("ollama_host", "http://localhost:11434"),
+                    )
+                elif b_name == "openai":
+                    return OpenAIBackend(
+                        model=settings.get("openai_model", "gpt-4o-mini"),
+                        base_url=settings.get("openai_api_base") or None,
+                        api_key=settings.get("openai_api_key") or None,
+                    )
+                elif b_name == "anthropic":
+                    return AnthropicBackend(
+                        model=settings.get("anthropic_model", "claude-3-5-sonnet-20241022"),
+                        api_key=settings.get("anthropic_api_key") or None,
+                    )
+        except Exception as e:
+            log.warning(f"Failed to load dynamic backend settings: {e}")
+        return make_backend()
+
+    def is_available(self) -> bool:
+        return self._get_backend().is_available()
+
+    def complete(self, prompt: str, *, system: str = "", temperature: float = 0.7, max_tokens: int = 1024) -> str:
+        return self._get_backend().complete(prompt, system=system, temperature=temperature, max_tokens=max_tokens)

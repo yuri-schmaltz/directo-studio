@@ -30,7 +30,9 @@ export default function AnimaticsPage() {
 
   const [projectId, setProjectId] = useState("");
   const [title, setTitle] = useState("Animatic");
-  const [backend, setBackend] = useState("mock");
+  const [backendType, setBackendType] = useState("mock");
+  const [customModel, setCustomModel] = useState("wan2.1-i2v");
+  const [customEndpoint, setCustomEndpoint] = useState("http://localhost:8001/generate");
   const [resolution, setResolution] = useState("1280x720");
   const [fps, setFps] = useState("24");
   const [musicPath, setMusicPath] = useState("");
@@ -53,6 +55,9 @@ export default function AnimaticsPage() {
     setSubmitting(true);
 
     try {
+      const backendVal = backendType === "custom" ? customModel : backendType;
+      const endpointVal = backendType === "custom" ? customEndpoint : null;
+
       const res = await fetch("/api/proxy/animatics", {
         method: "POST",
         headers: {
@@ -61,7 +66,8 @@ export default function AnimaticsPage() {
         body: JSON.stringify({
           project_id: projectId,
           title,
-          backend,
+          backend: backendVal,
+          backend_endpoint: endpointVal,
           fps: parseInt(fps),
           resolution: resolution.split("x").map(Number),
           music_path: musicPath || null,
@@ -156,13 +162,35 @@ export default function AnimaticsPage() {
               <div className="space-y-1.5">
                 <Label>Video Backend</Label>
                 <Select
-                  value={backend}
-                  onChange={(e) => setBackend(e.target.value)}
+                  value={backendType}
+                  onChange={(e) => setBackendType(e.target.value)}
                 >
                   <option value="mock">AI Video (Mock / Quick testing)</option>
                   <option value="ken-burns">Ken Burns (Pan & Zoom Fallback)</option>
+                  <option value="custom">Custom Local AI Video Server</option>
                 </Select>
               </div>
+
+              {backendType === "custom" && (
+                <>
+                  <div className="space-y-1.5 animate-fade-in">
+                    <Label>API Server Endpoint URL</Label>
+                    <Input
+                      value={customEndpoint}
+                      onChange={(e) => setCustomEndpoint(e.target.value)}
+                      placeholder="e.g. http://localhost:8001/generate"
+                    />
+                  </div>
+                  <div className="space-y-1.5 animate-fade-in">
+                    <Label>Model Identifier</Label>
+                    <Input
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      placeholder="e.g. wan2.1-i2v or hunyuan-video"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">

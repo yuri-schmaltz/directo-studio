@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import useSWR from "swr";
 import Link from "next/link";
+import { swrFetcher } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +10,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FolderKanban, Plus } from "lucide-react";
 
 export default function ProjectsPage() {
-  // For now we keep a client-side list (project creation not in the API
-  // response list endpoint). The detail page still works via /api/projects/{id}.
-  const [projects] = useState<Array<{ id: string; name: string; concept: string }>>(
-    [],
+  const { data } = useSWR<{ items: Array<{ id: string; name: string; concept: string }> }>(
+    "/api/proxy/projects",
+    swrFetcher
   );
+  const projects = data?.items || [];
 
   return (
     <div className="space-y-6">

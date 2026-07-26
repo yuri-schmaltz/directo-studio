@@ -382,6 +382,10 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         bus.publish(EventKind.PROJECT_CREATED, {"project_id": pid})
         return {"id": pid}
 
+    @app.get("/api/projects")
+    def projects_list() -> dict[str, Any]:
+        return {"items": project_memory.list_projects()}
+
     @app.get("/api/projects/{project_id}")
     def projects_get(project_id: str) -> dict[str, Any]:
         p = project_memory.get_project(project_id)

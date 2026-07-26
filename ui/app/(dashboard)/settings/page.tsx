@@ -40,12 +40,41 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [manualModelInput, setManualModelInput] = useState(false);
+
+  async function fetchOllamaModels(host: string) {
+    if (!host) return;
+    setLoadingModels(true);
+    try {
+      const res = await fetch(`/api/proxy/settings/ollama-models?host=${encodeURIComponent(host)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOllamaModels(data || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch Ollama models", e);
+    } finally {
+      setLoadingModels(false);
+    }
+  }
 
   useEffect(() => {
     if (settingsData) {
       setSettings(settingsData);
+      if (settingsData.llm_backend === "ollama") {
+        fetchOllamaModels(settingsData.ollama_host);
+      }
     }
   }, [settingsData]);
+
+  useEffect(() => {
+    if (settings.llm_backend === "ollama" && settings.ollama_host) {
+      fetchOllamaModels(settings.ollama_host);
+    }
+  }, [settings.llm_backend]);
 
   const handleChange = (key: keyof LLMSettings, val: string) => {
     setSettings((prev) => ({ ...prev, [key]: val }));
@@ -170,14 +199,62 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Ollama Model Name</Label>
-                    <Input
-                      value={settings.ollama_model}
-                      onChange={(e) => handleChange("ollama_model", e.target.value)}
-                      placeholder="e.g. llama3.1, mistral, gemma2"
-                    />
+                    <div className="flex justify-between items-center">
+                      <Label>Ollama Model Name</Label>
+                      <button
+                        type="button"
+                        onClick={() => fetchOllamaModels(settings.ollama_host)}
+                        className="text-xs text-brand-500 hover:text-brand-600 underline"
+                      >
+                        {loadingModels ? "Detecting..." : "Detect Models"}
+                      </button>
+                    </div>
+
+                    {!manualModelInput && ollamaModels.length > 0 ? (
+                      <div className="flex gap-2">
+                        <Select
+                          value={settings.ollama_model}
+                          onChange={(e) => {
+                            if (e.target.value === "__manual__") {
+                              setManualModelInput(true);
+                            } else {
+                              handleChange("ollama_model", e.target.value);
+                            }
+                          }}
+                          className="flex-1"
+                        >
+                          {ollamaModels.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))}
+                          <option value="__manual__">✏️ Enter custom name manually...</option>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={settings.ollama_model}
+                          onChange={(e) => handleChange("ollama_model", e.target.value)}
+                          placeholder="e.g. llama3.1, mistral, gemma2"
+                          className="flex-1"
+                        />
+                        {ollamaModels.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setManualModelInput(false)}
+                          >
+                            Use Dropdown
+                          </Button>
+                        )}
+                      </div>
+                    )}
                     <p className="text-xs text-fg-muted mt-1">
-                      Ensure you have run <code>ollama pull &lt;model-name&gt;</code> in your terminal before using it.
+                      {ollamaModels.length > 0 
+                        ? "Select from your downloaded models or type a custom identifier."
+                        : "Ensure you have run ollama pull <model-name> in your terminal before using it."
+                      }
                     </p>
                   </div>
                 </div>

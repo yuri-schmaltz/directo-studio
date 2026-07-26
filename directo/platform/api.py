@@ -570,6 +570,20 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
             json.dump(payload, f, indent=2)
         return {"saved": True}
 
+    @app.get("/api/settings/ollama-models")
+    def list_ollama_models(host: str = "http://localhost:11434") -> list[str]:
+        import urllib.request
+        import json
+        try:
+            url = host.rstrip("/") + "/api/tags"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                data = json.loads(resp.read())
+                models = data.get("models", [])
+                return [m.get("name") for m in models if m.get("name")]
+        except Exception:
+            return []
+
     return app
 
 

@@ -127,6 +127,20 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
                     narration=c.get("narration"),
                 ))
 
+            if not clips:
+                records = gallery.search(project=payload.get("project_id"), limit=100)
+                for r in records:
+                    clips.append(AnimaticClip(
+                        image_path=r.path,
+                        duration_s=2.0,
+                        narration=r.prompt or "",
+                    ))
+
+            if not clips:
+                raise ValueError(
+                    f"No storyboard clips found in payload or in gallery for project: {payload.get('project_id')}"
+                )
+
             project = AnimaticProject(
                 id=payload.get("project_id", "untitled"),
                 title=payload.get("title", "Animatic"),

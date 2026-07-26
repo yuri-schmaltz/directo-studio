@@ -15,6 +15,7 @@ import {
   Radio,
   Info,
   Target,
+  Film,
 } from "lucide-react";
 
 const NAV = [
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/presets", label: "Presets", icon: Palette },
   { href: "/cinema", label: "Cinema", icon: Clapperboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/animatics", label: "Animatics", icon: Film },
   { href: "/costs", label: "Costs", icon: DollarSign },
   { href: "/backup", label: "Backup", icon: Database },
   { href: "/events", label: "Live Events", icon: Radio },

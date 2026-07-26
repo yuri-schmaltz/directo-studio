@@ -14,6 +14,7 @@ const MOBILE_NAV = [
   { href: "/presets", label: "Presets" },
   { href: "/cinema", label: "Cinema" },
   { href: "/projects", label: "Projects" },
+  { href: "/animatics", label: "Animatics" },
   { href: "/costs", label: "Costs" },
   { href: "/backup", label: "Backup" },
   { href: "/events", label: "Live Events" },

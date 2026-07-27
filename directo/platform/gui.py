@@ -40,7 +40,6 @@ from directo.gallery import Gallery, ImageRecord
 from directo.observability import configure_logging, get_logger
 from directo.platform import (
     CacheLayer,
-    CostTracker,
     EventBus,
     EventKind,
     ImageCache,
@@ -74,7 +73,6 @@ def get_services(db_dir_str: str) -> dict[str, Any]:
         "queue": PersistentQueue(db_dir / "queue.db"),
         "gallery": Gallery(db_dir / "gallery.db"),
         "presets": PresetStore(db_dir / "presets.db"),
-        "costs": CostTracker(db_dir / "costs.db"),
         "bus": EventBus(db_path=db_dir / "events.db"),
         "cache": CacheLayer(
             prompt_cache=PromptCache(db_dir / "prompts.db"),
@@ -108,16 +106,14 @@ def page_dashboard(svcs: dict[str, Any]) -> None:
     cols = st.columns(4)
     q = svcs["queue"]
     g = svcs["gallery"]
-    c = svcs["costs"]
     queue_stats = q.stats()
     cols[0].metric("Queue (total)", queue_stats.get("total", 0))
     cols[1].metric("Pending", queue_stats.get("pending", 0))
     cols[2].metric("Running", queue_stats.get("running", 0))
     cols[3].metric("Failed", queue_stats.get("failed", 0))
-    cols2 = st.columns(3)
+    cols2 = st.columns(2)
     cols2[0].metric("Gallery images", g.count())
-    cols2[1].metric("Total spend", f"${c.total():.4f}")
-    cols2[2].metric("Cache (prompts)", svcs["cache"].prompts.stats().get("entries", 0))
+    cols2[1].metric("Cache (prompts)", svcs["cache"].prompts.stats().get("entries", 0))
     with st.expander("Queue stats (raw)"):
         st.json(queue_stats)
     with st.expander("Gallery stats (raw)"):
@@ -292,44 +288,6 @@ def page_cinema(svcs: dict[str, Any]) -> None:
                         st.json(s.to_dict())
 
 
-def page_costs(svcs: dict[str, Any]) -> None:
-    st.header("💰 Costs")
-    c: CostTracker = svcs["costs"]
-    col1, col2 = st.columns(2)
-    with col1:
-        project = st.text_input("Filter by project (optional)", value="")
-    with col2:
-        hours = st.number_input("Last N hours", min_value=0, value=0, help="0 = all time")
-    since = (time.time() - float(hours) * 3600) if hours else None
-    total = c.total(project=project or None, since=since)
-    st.metric("Total spend (filtered)", f"${total:.4f}")
-    col3, col4 = st.columns(2)
-    with col3:
-        st.subheader("By project")
-        rows = c.by_project(since=since)
-        if rows:
-            st.dataframe(
-                [{"project": r["project"], "cost_usd": round(r["total_cost"], 4),
-                  "entries": r["entries"]} for r in rows[:20]],
-                use_container_width=True,
-            )
-    with col4:
-        st.subheader("By kind")
-        rows = c.by_kind(project=project or None, since=since)
-        if rows:
-            st.dataframe(
-                [{"kind": r["kind"], "cost_usd": round(r["total_cost"], 4),
-                  "entries": r["entries"]} for r in rows[:20]],
-                use_container_width=True,
-            )
-    st.subheader("Timeseries (hourly buckets)")
-    ts = c.timeseries(bucket_seconds=3600, project=project or None, since=since)
-    if ts:
-        st.line_chart(
-            [{"timestamp": r["bucket"], "cost_usd": r["cost"]} for r in ts[:200]],
-            x="timestamp", y="cost_usd",
-        )
-
 
 def page_backup(svcs: dict[str, Any]) -> None:
     st.header("💾 Backup")
@@ -338,7 +296,6 @@ def page_backup(svcs: dict[str, Any]) -> None:
     targets = {
         "queue": db_dir / "queue.db",
         "gallery": db_dir / "gallery.db",
-        "costs": db_dir / "costs.db",
         "events": db_dir / "events.db",
         "presets": db_dir / "presets.db",
     }
@@ -424,7 +381,6 @@ PAGES = {
     "Jobs": page_jobs,
     "Presets": page_presets,
     "Cinema Engine": page_cinema,
-    "Costs": page_costs,
     "Backup": page_backup,
     "Live Events": page_live_events,
     "About": page_about,

@@ -5,17 +5,19 @@
 import type {
   BackupResult,
   CinemaReport,
-  CostSummary,
   Event,
   HealthResponse,
   ImageRecord,
   Job,
   JobCreatePayload,
+  MediaJob,
   Preset,
   ProjectRecord,
   QueueStats,
   Scene,
-  TimeseriesPoint,
+  StyleBible,
+  StyleBibleSummary,
+  StyleDirective,
 } from "./types";
 
 const isServer = typeof window === "undefined";
@@ -178,29 +180,6 @@ export const api = {
       }),
   },
 
-  // Costs
-  costs: {
-    summary: (params: { project?: string; hours?: number } = {}) => {
-      const qs = new URLSearchParams(
-        Object.entries(params).filter(([, v]) => v !== undefined && v !== "")
-          .map(([k, v]) => [k, String(v)]),
-      );
-      return request<CostSummary>(`/api/costs?${qs.toString()}`);
-    },
-    timeseries: (params: {
-      project?: string;
-      hours?: number;
-      bucket_seconds?: number;
-    } = {}) => {
-      const qs = new URLSearchParams(
-        Object.entries(params).filter(([, v]) => v !== undefined && v !== "")
-          .map(([k, v]) => [k, String(v)]),
-      );
-      return request<TimeseriesPoint[]>(`/api/costs/timeseries?${qs.toString()}`)
-        .catch(() => []);
-    },
-  },
-
   // Backup
   backup: {
     create: (data: { db?: string; output_dir?: string } = {}) =>
@@ -212,6 +191,58 @@ export const api = {
       request<{ items: { path: string; size: number; ts: number }[] }>(
         `/api/backup/list?db=${encodeURIComponent(db)}`,
       ).catch(() => ({ items: [] })),
+  },
+
+  // Style Bible
+  styleBible: {
+    /** Returns metadata summaries — no characters/environments/directives arrays. */
+    list: () =>
+      request<{ items: StyleBibleSummary[] }>("/api/style-bible"),
+    /** Returns full StyleBible with characters[], environments[], directives[]. */
+    get: (id: string) =>
+      request<StyleBible>(`/api/style-bible/${id}`),
+    create: (data: Omit<StyleBible, "version"> & { version?: string }) =>
+      request<{ id: string }>("/api/style-bible", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: StyleBible) =>
+      request<{ id: string }>(`/api/style-bible/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<{ deleted: boolean }>(`/api/style-bible/${id}`, {
+        method: "DELETE",
+      }),
+    /** Export raw YAML or JSON string. Use exportFile() for blob download. */
+    exportRaw: (id: string, format: "yaml" | "json" = "yaml") =>
+      fetch(
+        `/api/proxy/style-bible/${id}/export?format=${format}`,
+      ).then((r) => r.text()),
+    import: (content: string, format: "json" | "yaml" = "json") =>
+      request<{ id: string; name: string }>("/api/style-bible/import", {
+        method: "POST",
+        body: JSON.stringify({ content, format }),
+      }),
+  },
+
+  // Media Hub
+  mediaHub: {
+    generate: (payload: {
+      prompt: string;
+      duration?: number;
+      aspect_ratio?: string;
+      bible_id?: string | null;
+      character_ids?: string[];
+      environment_id?: string | null;
+    }) =>
+      request<{ job_id: string; status: string; message: string }>(
+        "/api/media-hub/generate",
+        { method: "POST", body: JSON.stringify(payload) },
+      ),
+    getJob: (jobId: string) =>
+      request<MediaJob>(`/api/media-hub/jobs/${jobId}`),
   },
 };
 

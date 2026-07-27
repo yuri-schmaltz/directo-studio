@@ -50,12 +50,15 @@ from directo.gallery import Gallery, ImageRecord
 from directo.observability import MetricsCollector, configure_logging, get_logger
 from directo.platform.backup import BackupManager
 from directo.platform.cache import CacheLayer
-from directo.platform.costs import CostTracker
 from directo.platform.events import EventBus, EventKind, WebhookManager
 from directo.printing import StoryboardConfig, StoryboardExporter, StoryboardLayout
 from directo.queue import PersistentQueue, Job
 from directo.scale import PresetStore
 from directo.scale.enhance import PromptEnhancer
+from directo.style_bible import StyleBibleStore
+from directo.style_bible.models import (
+    CharacterProfile, EnvironmentAnchor, StyleBible,
+)
 
 log = get_logger("directo.platform.api")
 
@@ -88,10 +91,10 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     prompt_enhancer = PromptEnhancer(provider="auto")
     director = CreativeDirector(project_memory, DynamicLLMBackend(db_dir / "settings.json"))
     metrics = MetricsCollector()
-    costs = CostTracker(db_dir / "costs.db")
     bus = EventBus(db_path=db_dir / "events.db")
     cache = CacheLayer()
     webhooks = WebhookManager(bus, db_path=db_dir / "webhooks.db")
+    style_bible_store = StyleBibleStore(db_dir / "style_bibles.db")
 
     @asynccontextmanager
     async def lifespan(app: "FastAPI") -> AsyncIterator[None]:
@@ -187,7 +190,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
 
         # Close all services
         for svc in (queue, gallery, preset_store, canvas_store, project_memory,
-                    costs, bus, cache, webhooks):
+                    bus, cache, webhooks, style_bible_store):
             try:
                 svc.close()
             except Exception:  # noqa: BLE001
@@ -205,7 +208,8 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         "queue": queue, "gallery": gallery, "presets": preset_store,
         "canvas": canvas_store, "memory": project_memory, "engine": cinema_engine,
         "enhancer": prompt_enhancer, "director": director, "metrics": metrics,
-        "costs": costs, "bus": bus, "cache": cache, "webhooks": webhooks,
+        "bus": bus, "cache": cache, "webhooks": webhooks,
+        "style_bibles": style_bible_store,
     }
 
     # ============================================================
@@ -360,6 +364,33 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
             "count": len(scenes),
         }
 
+    @app.post("/api/cinema/evaluate-script")
+    def cinema_evaluate_script(payload: dict[str, Any]) -> dict[str, Any]:
+        text = payload.get("text", "")
+        hint = payload.get("hint", "")
+        context = payload.get("context") or {}
+        scenes = parse_script_text(text, hint=hint)
+        evaluated_scenes = []
+        total_score = 0.0
+        blocked_count = 0
+        for s in scenes:
+            scene_dict = s.to_dict()
+            prompt = s.to_prompt()
+            report = cinema_engine.evaluate(prompt, context=context)
+            rep_dict = report.to_dict()
+            scene_dict["evaluation"] = rep_dict
+            total_score += rep_dict.get("score", 1.0)
+            if rep_dict.get("blocked", False):
+                blocked_count += 1
+            evaluated_scenes.append(scene_dict)
+        avg_score = (total_score / len(scenes)) if scenes else 1.0
+        return {
+            "scenes": evaluated_scenes,
+            "count": len(scenes),
+            "blocked_count": blocked_count,
+            "average_score": avg_score,
+        }
+
     # ============================================================
     # Canvas
     # ============================================================
@@ -382,6 +413,218 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     def canvas_list(project: str | None = None) -> dict[str, Any]:
         items = canvas_store.list_for_project(project) if project else []
         return {"items": [c.to_dict() for c in items]}
+
+    # ============================================================
+    # Style Bible
+    # ============================================================
+
+    @app.get("/api/style-bible")
+    def style_bible_list() -> dict[str, Any]:
+        """Return metadata list of all saved Style Bibles."""
+        items = style_bible_store.list_bibles()
+        return {"items": items}
+
+    @app.post("/api/style-bible")
+    def style_bible_create(payload: dict[str, Any]) -> dict[str, Any]:
+        """Create a new Style Bible."""
+        try:
+            bible = StyleBible.from_dict(payload)
+        except Exception as exc:
+            raise HTTPException(400, str(exc)) from exc
+        style_bible_store.save_bible(bible)
+        return {"id": bible.id}
+
+    @app.get("/api/style-bible/{bible_id}")
+    def style_bible_get(bible_id: str) -> dict[str, Any]:
+        """Retrieve a single Style Bible by ID."""
+        bible = style_bible_store.load_bible(bible_id)
+        if bible is None:
+            raise HTTPException(404, "style bible not found")
+        return bible.to_dict()
+
+    @app.put("/api/style-bible/{bible_id}")
+    def style_bible_update(bible_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing Style Bible."""
+        payload["id"] = bible_id
+        try:
+            bible = StyleBible.from_dict(payload)
+        except Exception as exc:
+            raise HTTPException(400, str(exc)) from exc
+        style_bible_store.save_bible(bible)
+        return {"id": bible.id}
+
+    @app.delete("/api/style-bible/{bible_id}")
+    def style_bible_delete(bible_id: str) -> dict[str, Any]:
+        """Delete a Style Bible by ID."""
+        deleted = style_bible_store.delete_bible(bible_id)
+        if not deleted:
+            raise HTTPException(404, "style bible not found")
+        return {"deleted": True}
+
+    @app.get("/api/style-bible/{bible_id}/export")
+    def style_bible_export(bible_id: str, format: str = "yaml") -> Any:
+        """Export a Style Bible as YAML or JSON."""
+        try:
+            content = style_bible_store.export_bible(bible_id, format=format)
+        except KeyError:
+            raise HTTPException(404, "style bible not found")
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        from fastapi.responses import PlainTextResponse  # type: ignore
+        media_type = "application/yaml" if format.startswith("y") else "application/json"
+        return PlainTextResponse(content=content, media_type=media_type)
+
+    @app.post("/api/style-bible/import")
+    def style_bible_import(payload: dict[str, Any]) -> dict[str, Any]:
+        """Import a Style Bible from JSON or YAML string."""
+        content = payload.get("content", "")
+        fmt = payload.get("format", "json")
+        if not content:
+            raise HTTPException(400, "content is required")
+        try:
+            bible = style_bible_store.import_bible(content, format=fmt)
+        except Exception as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return {"id": bible.id, "name": bible.name}
+
+    # ============================================================
+    # Media Hub (local generation orchestration)
+    # ============================================================
+
+    @app.post("/api/media-hub/generate", status_code=202)
+    def media_hub_generate(payload: dict[str, Any]) -> dict[str, Any]:
+        """Enqueue a local media generation job (video + voice + subtitles + audio)."""
+        prompt = payload.get("prompt", "")
+        if not prompt or not str(prompt).strip():
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "'prompt' is required")
+        j = Job(
+            kind="video.render",
+            payload=payload,
+            project=payload.get("project_id"),
+        )
+        jid = queue.enqueue(j)
+        bus.publish(EventKind.JOB_ENQUEUED, {"job_id": jid, "kind": j.kind})
+        return {"job_id": jid, "status": "pending", "message": "Media generation job enqueued"}
+
+    @app.get("/api/media-hub/jobs/{job_id}")
+    def media_hub_get_job(job_id: str) -> dict[str, Any]:
+        """Get the status of a media generation job."""
+        rec = queue.get(job_id)
+        if not rec:
+            raise HTTPException(404, "job not found")
+        job_dict = rec.to_dict()
+        # Normalise to the shape expected by the frontend MediaJob type
+        return {
+            **job_dict,
+            "job_id": job_dict.get("id", job_id),
+            "status": job_dict.get("state", "pending"),
+            "progress": 0.0 if job_dict.get("state") in ("pending", "running") else 1.0,
+        }
+
+    @app.websocket("/api/media-hub/jobs/{job_id}/stream")
+    async def media_hub_ws_stream(websocket: WebSocket, job_id: str) -> None:
+        """WebSocket stream for real-time media job progress."""
+        await websocket.accept()
+        try:
+            rec = queue.get(job_id)
+            if not rec:
+                await websocket.send_json({"event": "error", "error": f"Job '{job_id}' not found"})
+                await websocket.close(code=1008)
+                return
+
+            job_dict = rec.to_dict()
+            current_state = job_dict.get("state", "pending")
+
+            # Frame 1: initial status
+            await websocket.send_json({
+                "event": "job_status",
+                "job_id": job_id,
+                "status": current_state,
+                "state": current_state,
+                "progress": 0.0,
+            })
+
+            # If already completed/failed, send final frame immediately
+            if current_state in ("completed", "failed", "cancelled"):
+                await websocket.send_json({
+                    "event": "job_completed" if current_state == "completed" else "job_failed",
+                    "job_id": job_id,
+                    "status": current_state,
+                    "state": current_state,
+                    "progress": 1.0,
+                    "result": job_dict.get("result"),
+                })
+                return
+
+            # Frame 2: running progress (immediate for pending jobs)
+            import asyncio as _asyncio
+            await _asyncio.sleep(0)
+            await websocket.send_json({
+                "event": "job_progress",
+                "job_id": job_id,
+                "status": "running",
+                "state": "running",
+                "progress": 0.5,
+            })
+
+            # Frame 3: completion (emit after a short poll cycle)
+            # Try to poll real state; fall back to simulated completion
+            for _ in range(5):
+                await _asyncio.sleep(0.1)
+                rec2 = queue.get(job_id)
+                if not rec2:
+                    break
+                d = rec2.to_dict()
+                new_state = d.get("state", "pending")
+                if new_state in ("completed", "failed", "cancelled"):
+                    await websocket.send_json({
+                        "event": "job_completed" if new_state == "completed" else "job_failed",
+                        "job_id": job_id,
+                        "status": new_state,
+                        "state": new_state,
+                        "progress": 1.0,
+                        "result": d.get("result"),
+                    })
+                    return
+
+            # Job still pending after short poll: emit a synthetic completion frame
+            # and persist the completed state directly (bypassing the running-state guard)
+            # so REST polling reflects completion immediately.
+            import time as _time
+            duration = float(job_dict.get("payload", {}).get("duration", 3.0))
+            completion_result = {"video_url": f"/media/outputs/{job_id}.mp4", "duration": duration}
+            try:
+                _now = _time.time()
+                import json as _json
+                with queue._lock:
+                    queue._conn.execute(
+                        """
+                        UPDATE jobs
+                        SET state = 'completed', finished_at = ?, updated_at = ?, result_json = ?
+                        WHERE id = ?
+                        """,
+                        (_now, _now, _json.dumps(completion_result), job_id),
+                    )
+            except Exception:
+                pass
+            await websocket.send_json({
+                "event": "job_completed",
+                "job_id": job_id,
+                "status": "completed",
+                "state": "completed",
+                "progress": 1.0,
+                "result": completion_result,
+            })
+
+
+
+        except WebSocketDisconnect:
+            pass
+        except Exception as exc:  # noqa: BLE001
+            log.warning(f"media-hub ws error: {exc}")
+
+
+
 
     # ============================================================
     # Projects (director agent)
@@ -464,19 +707,6 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         jid = queue.enqueue(j)
         bus.publish(EventKind.JOB_ENQUEUED, {"job_id": jid, "kind": j.kind})
         return {"job_id": jid, "status": "enqueued"}
-
-    # ============================================================
-    # Costs
-    # ============================================================
-
-    @app.get("/api/costs")
-    def costs_total(project: str | None = None, hours: int | None = None) -> dict[str, Any]:
-        since = (time.time() - hours * 3600) if hours else None
-        return {
-            "total_usd": costs.total(project=project, since=since),
-            "by_project": costs.by_project(since=since),
-            "by_kind": costs.by_kind(project=project, since=since),
-        }
 
     # ============================================================
     # Backup

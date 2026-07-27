@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
@@ -15,7 +15,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Directo",
+  title: "Directo Studio",
   description: "Production dashboard for the Directo creative AI platform",
   icons: {
     icon: "/favicon.svg",
@@ -30,10 +30,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrains.variable} dark`}
+      className={`${outfit.variable} ${jetbrains.variable} dark`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen font-sans antialiased">{children}</body>
+      <body className="min-h-screen font-sans antialiased bg-viewport-grid">{children}</body>
     </html>
   );
 }

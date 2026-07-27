@@ -15,7 +15,6 @@ const KIND_VARIANT: Record<string, "default" | "success" | "warning" | "danger" 
   "image.added": "success",
   "image.rated": "brand",
   "project.created": "brand",
-  "cost.recorded": "warning",
 };
 
 interface EventFeedProps {

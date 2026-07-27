@@ -33,8 +33,6 @@ from directo.observability import configure_logging, get_logger
 from directo.platform import (
     BackupManager,
     CacheLayer,
-    CostKind,
-    CostTracker,
     EventBus,
     EventKind,
     ImageCache,
@@ -126,29 +124,6 @@ def main() -> None:
     conn.close()
     print(f"  ✓ restore round-trip: {n} rows preserved")
 
-    # ============================================================
-    # 5.3 — Cost tracking
-    # ============================================================
-    section("5.3 Cost Tracking")
-    with CostTracker(workspace / "costs.db") as costs:
-        costs.record_gpu(7200, project="alpha", node="h100")     # 2h
-        costs.record_gpu(3600, project="beta", node="a100")      # 1h
-        costs.record_llm(50_000, project="alpha", model="gpt-4o")
-        costs.record_llm(20_000, project="alpha", model="claude")
-        costs.record_storage(50, project="alpha")
-        costs.record_bandwidth(2 * 1024 ** 3, project="alpha")   # 2GB
-        total = costs.total()
-        by_proj = costs.by_project()[:5]
-        by_kind = costs.by_kind()[:5]
-        ts = costs.timeseries(bucket_seconds=3600)[:10]
-        print(f"  total spend: ${total:.4f}")
-        print(f"  top projects:")
-        for b in by_proj:
-            print(f"    {b['project']:10s}  ${b['total_cost']:.4f}")
-        print(f"  top kinds:")
-        for b in by_kind:
-            print(f"    {b['kind']:25s}  ${b['total_cost']:.4f}")
-        print(f"  timeseries buckets: {len(ts)}")
 
     # ============================================================
     # 5.4 — Cache

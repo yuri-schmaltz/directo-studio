@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Save, AlertCircle, CheckCircle, Sliders } from "lucide-react";
+import { Settings, Save, AlertCircle, CheckCircle, Sliders, Database, Check, X as XIcon } from "lucide-react";
+import type { BackupResult } from "@/lib/types";
 
 interface LLMSettings {
   llm_backend: string;
@@ -18,6 +19,107 @@ interface LLMSettings {
   openai_model: string;
   anthropic_api_key: string;
   anthropic_model: string;
+}
+
+const BACKUP_TARGETS = [
+  { value: "queue", label: "queue.db (job queue)" },
+  { value: "gallery", label: "gallery.db (images)" },
+  { value: "events", label: "events.db (event log)" },
+  { value: "presets", label: "presets.db (preset packs)" },
+];
+
+function BackupSection() {
+  const [db, setDb] = useState("queue");
+  const [result, setResult] = useState<BackupResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function runBackup() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/proxy/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ db }),
+      });
+      if (r.ok) setResult(await r.json());
+      else setError(`${r.status} ${r.statusText}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Database className="h-5 w-5 text-accent" />
+          Database Backup & Maintenance
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-xs text-fg-muted">
+          Perform a live hot-copy backup of Directo SQLite database files with integrity verification.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="md:col-span-2 space-y-1.5">
+            <Label>Select Target Database</Label>
+            <Select value={db} onChange={(e) => setDb(e.target.value)}>
+              {BACKUP_TARGETS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Button type="button" onClick={runBackup} disabled={loading} className="w-full">
+              <Database className="h-4 w-4 mr-2" />
+              {loading ? "Creating Backup…" : "Create Backup"}
+            </Button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive flex items-center gap-2">
+            <XIcon className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {result && (
+          <div className="p-4 bg-bg border border-border rounded-md space-y-2 text-xs font-mono">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold mb-2">
+              <Check className="h-4 w-4" />
+              <span>Backup Completed Successfully</span>
+            </div>
+            <div className="flex justify-between border-b border-border/40 pb-1">
+              <span className="text-fg-subtle">Destination Path:</span>
+              <span className="text-fg truncate max-w-xs">{result.path}</span>
+            </div>
+            <div className="flex justify-between border-b border-border/40 pb-1">
+              <span className="text-fg-subtle">File Size:</span>
+              <span className="text-fg">{result.size_bytes.toLocaleString()} bytes</span>
+            </div>
+            <div className="flex justify-between border-b border-border/40 pb-1">
+              <span className="text-fg-subtle">Integrity Verified:</span>
+              <span className={result.verified ? "text-emerald-400" : "text-rose-400"}>
+                {result.verified ? "✓ PASS" : "✗ FAIL"}
+              </span>
+            </div>
+            <div className="flex justify-between pt-0.5">
+              <span className="text-fg-subtle">Duration:</span>
+              <span className="text-fg">{result.duration_ms.toFixed(1)} ms</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function SettingsPage() {
@@ -111,9 +213,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Global Settings</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Global Settings & Maintenance</h2>
         <p className="text-sm text-fg-muted">
-          Configure active LLM models, API keys, and connection hosts for creative director agents.
+          Configure active LLM models, API keys, connection hosts, and database backups.
         </p>
       </div>
 
@@ -143,7 +245,7 @@ export default function SettingsPage() {
           <Card className="md:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Settings className="h-5 w-5 text-brand-500" />
+                <Settings className="h-5 w-5 text-accent" />
                 Active Backend
               </CardTitle>
             </CardHeader>
@@ -182,7 +284,7 @@ export default function SettingsPage() {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Sliders className="h-5 w-5 text-brand-500" />
+                <Sliders className="h-5 w-5 text-accent" />
                 Backend Configuration
               </CardTitle>
             </CardHeader>
@@ -204,7 +306,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => fetchOllamaModels(settings.ollama_host)}
-                        className="text-xs text-brand-500 hover:text-brand-600 underline"
+                        className="text-xs text-accent hover:underline"
                       >
                         {loadingModels ? "Detecting..." : "Detect Models"}
                       </button>
@@ -332,6 +434,9 @@ export default function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {/* Database Backup Section */}
+      <BackupSection />
     </div>
   );
 }

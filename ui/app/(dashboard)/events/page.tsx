@@ -3,7 +3,6 @@
 import { EventFeed } from "@/components/event-feed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEventStream } from "@/lib/ws";
-import { formatCost } from "@/lib/utils";
 import { useMemo } from "react";
 
 export default function EventsPage() {

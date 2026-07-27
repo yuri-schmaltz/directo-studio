@@ -67,6 +67,9 @@ export type ImageRecord = {
   notes: string;
   metadata: Record<string, unknown>;
   created_at: number;
+  url?: string;
+  job_id?: string;
+  params?: Record<string, any>;
 };
 
 export type Preset = {
@@ -75,6 +78,7 @@ export type Preset = {
   kind: string;
   era: string;
   description: string;
+  image_url?: string;
   model: string;
   prompt_template: string;
   prompt_prefix: string;
@@ -111,27 +115,16 @@ export type Scene = {
   }>;
   action: string;
   prompt: string;
+  evaluation?: CinemaReport;
 };
 
-export type CostSummary = {
-  total_usd: number;
-  by_project: Array<{
-    project: string;
-    total_cost: number;
-    entries: number;
-  }>;
-  by_kind: Array<{
-    kind: string;
-    total_cost: number;
-    entries: number;
-  }>;
+export type EvaluateScriptResponse = {
+  scenes: Scene[];
+  count: number;
+  blocked_count: number;
+  average_score: number;
 };
 
-export type TimeseriesPoint = {
-  bucket: number;
-  cost: number;
-  entries: number;
-};
 
 export type BackupResult = {
   path: string;
@@ -171,7 +164,6 @@ export type EventKind =
   | "project.updated"
   | "node.registered"
   | "node.health_changed"
-  | "cost.recorded"
   | "plugin.loaded"
   | "plugin.unloaded"
   | "cache.hit"
@@ -193,3 +185,85 @@ export const JOB_STATES: JobState[] = [
   "failed",
   "cancelled",
 ];
+
+// ─── Style Bible ─────────────────────────────────────────────────────────────
+
+export type LoRAConfig = {
+  name: string;
+  path: string;
+  weight: number;
+  trigger_words: string[];
+};
+
+export type CharacterProfile = {
+  id: string;
+  name: string;
+  base_prompt: string;
+  visual_anchors: string[];
+  loras: LoRAConfig[];
+  seeds: Record<string, number>;
+  reference_images: string[];
+  negative_prompt: string;
+};
+
+export type EnvironmentAnchor = {
+  id: string;
+  name: string;
+  scenario_prompt: string;
+  lighting: string;
+  color_palette: string[];
+  style_tokens: string[];
+  negative_prompt: string;
+};
+
+/** A single named style directive object — matches Python StyleDirective dataclass. */
+export type StyleDirective = {
+  id: string;
+  name: string;
+  global_prompt_prefix: string;
+  global_prompt_suffix: string;
+  negative_prompt: string;
+  aspect_ratio: string;
+  audio_voice_filters: Record<string, unknown>;
+  directive_seed?: number | null;
+};
+
+/** Metadata summary returned by the list endpoint — no full objects. */
+export type StyleBibleSummary = {
+  id: string;
+  name: string;
+  version: string;
+  character_count: number;
+  environment_count: number;
+  directive_count: number;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Full bible object returned by GET /api/style-bible/{id} */
+export type StyleBible = {
+  id: string;
+  name: string;
+  version: string;
+  characters: CharacterProfile[];
+  environments: EnvironmentAnchor[];
+  directives: StyleDirective[];
+};
+
+// ─── Media Hub ───────────────────────────────────────────────────────────────
+
+export type MediaJob = {
+  id: string;
+  job_id: string;
+  kind: string;
+  state: string;
+  status: string;
+  progress: number;
+  payload: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  error: string | null;
+  created_at: number;
+  started_at: number | null;
+  finished_at: number | null;
+};
+

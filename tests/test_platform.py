@@ -12,8 +12,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from directo.platform import (
     BackupManager,
     CacheLayer,
-    CostKind,
-    CostTracker,
     Event,
     EventBus,
     EventKind,
@@ -159,46 +157,6 @@ def test_multi_backup(tmp_path):
 # Cost tracking
 # ============================================================
 
-
-def test_cost_record_and_total():
-    with CostTracker(":memory:") as t:
-        t.record_gpu(3600.0, project="p1", node="gpu-1")
-        t.record_llm(1000, project="p1", model="gpt-4o")
-        t.record_storage(10, project="p1")
-        total = t.total(project="p1")
-        assert total > 0
-        by_project = t.by_project()
-        assert by_project[0]["project"] == "p1"
-
-
-def test_cost_by_kind():
-    with CostTracker(":memory:") as t:
-        t.record_gpu(100)
-        t.record_llm(500)
-        t.record_storage(2)
-        by_kind = t.by_kind()
-        kinds = [b["kind"] for b in by_kind]
-        assert "gpu_seconds" in kinds
-        assert "llm_tokens" in kinds
-        assert "storage_gb" in kinds
-
-
-def test_cost_set_prices():
-    t = CostTracker(":memory:")
-    t.set_prices(gpu_seconds=0.001)  # 10x default
-    rec = t.record_gpu(100)
-    # 100 * 0.001 = 0.1
-    assert abs(rec.total_usd - 0.1) < 1e-6
-    t.close()
-
-
-def test_cost_timeseries():
-    with CostTracker(":memory:") as t:
-        t.record_gpu(60, project="p1")
-        t.record_gpu(60, project="p1")
-        ts = t.timeseries(bucket_seconds=3600)
-        assert len(ts) >= 1
-        assert ts[0]["cost"] > 0
 
 
 # ============================================================
@@ -448,12 +406,6 @@ def test_image_cache_count_and_purge(tmp_path):
         assert c.count() == 1
 
 
-def test_cost_record_bandwidth():
-    with CostTracker(":memory:") as t:
-        rec = t.record_bandwidth(1024 * 1024 * 100, project="p1")  # 100MB
-        assert rec.total_usd > 0
-        assert rec.kind == CostKind.BANDWIDTH_BYTES
-
 
 def test_backup_integrity_check_real(tmp_path):
     import sqlite3
@@ -574,17 +526,27 @@ def test_api_cinema_evaluate(api_client):
     assert body["blocked"] is True
 
 
+def test_api_cinema_evaluate_script(api_client):
+    script_text = "# INT. SALOON - DAY\n\nA cowboy checks his smartphone.\n\n# EXT. DESERT - DAY\n\nA horse trots past."
+    r = api_client.post("/api/cinema/evaluate-script", json={
+        "text": script_text,
+        "hint": ".md",
+        "context": {"era": "1920-1930"},
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 2
+    assert body["blocked_count"] == 1
+    assert "evaluation" in body["scenes"][0]
+    assert body["scenes"][0]["evaluation"]["blocked"] is True
+
+
 def test_api_presets_list(api_client):
     r = api_client.get("/api/presets")
     assert r.status_code == 200
     body = r.json()
     assert body["count"] >= 8
 
-
-def test_api_costs_total(api_client):
-    r = api_client.get("/api/costs")
-    assert r.status_code == 200
-    assert "total_usd" in r.json()
 
 
 def test_api_backup(api_client):

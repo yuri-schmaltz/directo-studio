@@ -28,10 +28,6 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-export function formatCost(usd: number): string {
-  return `$${usd.toFixed(4)}`;
-}
-
 export function truncate(s: string, n: number = 60): string {
   if (!s) return "";
   return s.length > n ? s.slice(0, n - 1) + "…" : s;

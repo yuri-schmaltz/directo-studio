@@ -80,9 +80,11 @@ class Scene:
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id, "number": self.number, "slugline": self.slugline,
+            "heading": self.slugline,
             "location": self.location, "time_of_day": self.time_of_day,
             "interior": self.interior, "action": self.action,
-            "dialogue": [{"character": d.character, "text": d.text,
+            "prompt": self.to_prompt(),
+            "dialogue": [{"character": d.character, "text": d.text, "line": d.text,
                           "parenthetical": d.parenthetical} for d in self.dialogue],
             "characters": self.characters,
             "transitions": self.transitions, "raw": self.raw,
@@ -91,14 +93,14 @@ class Scene:
 
 
 # =====================================================================
-# Fountain parser
+# Fountain / Markdown parser
 # =====================================================================
 
 
-# A scene heading starts with INT./EXT./EST./I/E. (case-insensitive)
-# e.g. "INT. KITCHEN - DAY"
+# A scene heading starts with INT./EXT./EST./I/E. (case-insensitive) or Markdown # INT.
+# e.g. "INT. KITCHEN - DAY" or "# INT. KITCHEN - DAY"
 _SCENE_RE = re.compile(
-    r"^(?:INT|EXT|EST|INT\.\/EXT|I\/E)[\s\.\/]+(.+?)(?:\s*[-–—]\s*(.+))?$",
+    r"^(?:#+\s*)?(?:INT|EXT|EST|INT\.\/EXT|I\/E)[\s\.\/]+(.+?)(?:\s*[-–—]\s*(.+))?$",
     re.IGNORECASE,
 )
 _TRANSITION_RE = re.compile(
@@ -149,7 +151,8 @@ def parse_fountain(text: str) -> list[Scene]:
         if not (current_action or current_dialogue):
             return
         scene_number_local = len(scenes) + 1
-        slugline = (current_action[0] if current_action else "").strip() or "UNTITLED SCENE"
+        raw_slug = (current_action[0] if current_action else "").strip() or "UNTITLED SCENE"
+        slugline = raw_slug.lstrip("#").strip()
         # Parse slugline for location and time
         loc, tod, interior = _parse_slugline(slugline)
         scene_id = uuid.uuid4().hex[:12]
@@ -245,12 +248,13 @@ def parse_fountain(text: str) -> list[Scene]:
 
 def _parse_slugline(slug: str) -> tuple[str, str, bool | None]:
     """Extract location, time-of-day, interior/exterior from a slugline."""
-    m = _SCENE_RE.match(slug)
+    clean = slug.lstrip("#").strip()
+    m = _SCENE_RE.match(clean)
     if not m:
-        return slug, "", None
-    location = m.group(1).strip() if m.group(1) else slug
+        return clean, "", None
+    location = m.group(1).strip() if m.group(1) else clean
     tod = (m.group(2) or "").strip() if m.lastindex and m.lastindex >= 2 else ""
-    interior = True if slug.upper().startswith("INT") else (False if slug.upper().startswith("EXT") else None)
+    interior = True if clean.upper().startswith("INT") else (False if clean.upper().startswith("EXT") else None)
     return location, tod, interior
 
 
@@ -301,10 +305,10 @@ def parse_script(path: str | Path) -> list[Scene]:
 
 
 def parse_script_text(text: str, hint: str = "") -> list[Scene]:
-    """Parse script text. ``hint`` is the file extension hint (.fountain, .txt, etc)."""
-    if hint in (".fountain", ".spmd"):
+    """Parse script text. ``hint`` is the file extension hint (.fountain, .md, .txt, etc)."""
+    if hint in (".fountain", ".spmd", ".md", ".markdown"):
         return parse_fountain(text)
-    # Try Fountain first (it's plain text anyway, so safe to attempt)
+    # Try Fountain / Markdown scene regex first (it's plain text anyway, so safe to attempt)
     if any(_SCENE_RE.match(l.strip()) for l in text.splitlines() if l.strip()):
         return parse_fountain(text)
     return parse_plain_text(text)

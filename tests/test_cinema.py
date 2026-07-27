@@ -321,3 +321,23 @@ def test_parse_script_file(tmp_path):
     f.write_text(SAMPLE_FOUNTAIN)
     scenes = parse_script(f)
     assert len(scenes) == 3
+
+
+def test_parse_markdown_script():
+    md_text = """# INT. KITCHEN - DAY
+
+ALICE cooks eggs at the stove.
+
+## EXT. STREET - NIGHT
+
+BOB runs through the dark alley.
+"""
+    scenes = parse_script_text(md_text, hint=".md")
+    assert len(scenes) == 2
+    assert scenes[0].location.upper() == "KITCHEN"
+    assert scenes[0].interior is True
+    assert scenes[1].location.upper() == "STREET"
+    assert scenes[1].interior is False
+    assert scenes[1].time_of_day.upper() == "NIGHT"
+    assert scenes[0].slugline == "INT. KITCHEN - DAY"
+

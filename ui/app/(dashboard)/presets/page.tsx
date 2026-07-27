@@ -117,70 +117,91 @@ function PresetCard({ preset }: { preset: Preset }) {
     }
   }
 
+  const imgUrl = preset.image_url || `/presets/${preset.id}.jpg`;
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{preset.name}</CardTitle>
-          <Badge variant="brand">{preset.kind}</Badge>
-        </div>
-        {preset.era && (
-          <p className="text-xs text-fg-subtle">era: {preset.era}</p>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {preset.description && (
-          <p className="text-sm text-fg-muted line-clamp-3">
-            {preset.description}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-1.5 text-xs">
-          <Badge>{preset.model || "any model"}</Badge>
-          <Badge>{preset.steps} steps</Badge>
-          <Badge>cfg {preset.cfg_scale}</Badge>
-          <Badge>{preset.width}×{preset.height}</Badge>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setOpen(!open)}
-          className="w-full"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          {open ? "Hide enhancer" : "Enhance a prompt"}
-        </Button>
-        {open && (
-          <div className="space-y-2 pt-2 border-t border-border">
-            <Label>Your prompt</Label>
-            <Textarea
-              value={userPrompt}
-              onChange={(e) => setUserPrompt(e.target.value)}
-              rows={2}
-            />
-            <Button onClick={enhance} size="sm" disabled={loading} className="w-full">
-              {loading ? "Enhancing…" : "Run enhancement"}
-            </Button>
-            {result && (
-              <div className="space-y-2 text-xs">
-                <div>
-                  <p className="text-fg-subtle mb-1">rendered:</p>
-                  <pre className="bg-bg-muted p-2 rounded font-mono whitespace-pre-wrap break-words">
-                    {result.rendered}
-                  </pre>
-                </div>
-                {result.enhanced && result.enhanced !== result.rendered && (
-                  <div>
-                    <p className="text-fg-subtle mb-1">enhanced:</p>
-                    <pre className="bg-bg-muted p-2 rounded font-mono whitespace-pre-wrap break-words">
-                      {result.enhanced}
-                    </pre>
-                  </div>
-                )}
-              </div>
+    <Card className="overflow-hidden group flex flex-col justify-between hover:border-brand/40 transition-colors">
+      <div>
+        <div className="relative aspect-video w-full overflow-hidden bg-bg-muted border-b border-border">
+          <img
+            src={imgUrl}
+            alt={preset.name}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-bg-surface/90 via-transparent to-transparent opacity-80" />
+          <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between pointer-events-none">
+            <Badge variant="brand" className="backdrop-blur-md bg-brand/80 text-white font-medium shadow-sm">
+              {preset.kind}
+            </Badge>
+            {preset.era && (
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-black/60 backdrop-blur-md text-fg-muted border border-white/10">
+                {preset.era}
+              </span>
             )}
           </div>
-        )}
-      </CardContent>
+        </div>
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-base font-semibold group-hover:text-brand transition-colors">
+            {preset.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 pb-4">
+          {preset.description && (
+            <p className="text-sm text-fg-muted line-clamp-2 leading-relaxed">
+              {preset.description}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            <Badge>{preset.model || "any model"}</Badge>
+            <Badge>{preset.steps} steps</Badge>
+            <Badge>cfg {preset.cfg_scale}</Badge>
+            <Badge>{preset.width}×{preset.height}</Badge>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setOpen(!open)}
+            className="w-full"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {open ? "Hide enhancer" : "Enhance a prompt"}
+          </Button>
+          {open && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label>Your prompt</Label>
+              <Textarea
+                value={userPrompt}
+                onChange={(e) => setUserPrompt(e.target.value)}
+                rows={2}
+              />
+              <Button onClick={enhance} size="sm" disabled={loading} className="w-full">
+                {loading ? "Enhancing…" : "Run enhancement"}
+              </Button>
+              {result && (
+                <div className="space-y-2 text-xs">
+                  <div>
+                    <p className="text-fg-subtle mb-1">rendered:</p>
+                    <pre className="bg-bg-muted p-2 rounded font-mono whitespace-pre-wrap break-words">
+                      {result.rendered}
+                    </pre>
+                  </div>
+                  {result.enhanced && result.enhanced !== result.rendered && (
+                    <div>
+                      <p className="text-fg-subtle mb-1">enhanced:</p>
+                      <pre className="bg-bg-muted p-2 rounded font-mono whitespace-pre-wrap break-words">
+                        {result.enhanced}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </div>
     </Card>
   );
 }

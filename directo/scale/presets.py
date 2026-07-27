@@ -51,6 +51,7 @@ class Preset:
     kind: str = "live_action"  # "live_action" | "animation" | "abstract" | "custom"
     era: str = ""              # e.g. "1927-1940", "1990s", "Ghibli"
     description: str = ""
+    image_url: str = ""        # path or URL for preset thumbnail image
 
     # Model stack
     model: str = ""            # base model name (e.g. "flux-dev", "sdxl-base")
@@ -85,7 +86,10 @@ class Preset:
     created_at: float = field(default_factory=time.time)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        d = asdict(self)
+        if not d.get("image_url"):
+            d["image_url"] = f"/presets/{self.id}.jpg"
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Preset":
@@ -227,6 +231,62 @@ def _builtin_presets() -> list[Preset]:
             tags=["parasite", "korean", "2019", "social-contrast"],
             is_builtin=True,
         ),
+        # Cyberpunk Neon Noir (Wong Kar-wai)
+        Preset(
+            id="live-neon-noir-wong",
+            name="Neon Noir — Cyberpunk Realism",
+            kind="live_action", era="1990s-Present",
+            description="Steeped in Wong Kar-wai & Christopher Doyle style; neon reflections, rain-slicked streets, step-printing shutter.",
+            model="flux-dev", sampler="euler", scheduler="karras",
+            steps=30, cfg_scale=4.5,
+            prompt_prefix="wong kar-wai cinematography, neon-soaked urban night scene, slow shutter motion blur, vivid red and cyan lighting contrast, rain-slicked pavement",
+            prompt_suffix="35mm film grain, atmospheric haze, step-printing effect, deep shadow detail",
+            negative_prompt="bright daylight, clean studio lighting, 3d render, sharp focus",
+            tags=["neon-noir", "wong-kar-wai", "cyberpunk", "night"],
+            is_builtin=True,
+        ),
+        # Modern Brutalist Sci-Fi (Villeneuve / Deakins)
+        Preset(
+            id="live-brutalist-scifi",
+            name="Brutalist Sci-Fi (Villeneuve)",
+            kind="live_action", era="2015+",
+            description="Denis Villeneuve & Roger Deakins style; monumental architecture, diffuse hazy sunlight, amber/monochrome scale.",
+            model="flux-dev", sampler="euler", scheduler="normal",
+            steps=32, cfg_scale=4.0,
+            prompt_prefix="denis villeneuve cinema style, massive scale brutalist architecture, hazy diffused atmospheric sunlight, minimalist composition, monochrome amber tone",
+            prompt_suffix="extreme wide angle shot, volumetric dust rays, 70mm IMAX aesthetic, crisp contrast",
+            negative_prompt="cluttered scene, oversaturated neon, busy background, lens flare",
+            tags=["villeneuve", "brutalist", "scifi", "imax"],
+            is_builtin=True,
+        ),
+        # Pastel Symmetry (Wes Anderson)
+        Preset(
+            id="live-pastel-symmetry",
+            name="Pastel Symmetry (Wes Anderson)",
+            kind="live_action", era="1970s Aesthetic",
+            description="One-point perspective, pastel palette, vintage 1970s interior production design, flat lighting.",
+            model="flux-dev", sampler="euler", scheduler="normal",
+            steps=28, cfg_scale=5.0,
+            prompt_prefix="wes anderson aesthetic, perfectly centered one-point perspective composition, pastel color palette, vintage 1970s interior production design",
+            prompt_suffix="flat lighting, crisp detail, whimsical set dress, kodachrome 64 film stock",
+            negative_prompt="dramatic lighting, dutch tilt, dark shadows, modern digital texture",
+            tags=["wes-anderson", "symmetry", "pastel", "vintage"],
+            is_builtin=True,
+        ),
+        # A24 Folk Horror / Moody Naturalism
+        Preset(
+            id="live-a24-moody-naturalism",
+            name="A24 Folk & Moody Naturalism",
+            kind="live_action", era="2015+",
+            description="Overcast natural lighting, desaturated earthy tones, eerie quietness (The Witch, Midsommar).",
+            model="flux-dev", sampler="euler_a", scheduler="karras",
+            steps=30, cfg_scale=4.5,
+            prompt_prefix="A24 indie film screenshot, overcast natural lighting, desaturated earthy tones, moody atmospheric tension, remote rural setting",
+            prompt_suffix="natural skin texture, organic materials, shallow depth of field, 35mm matte finish",
+            negative_prompt="high contrast, glossy, studio lights, artificial colors, vibrant",
+            tags=["a24", "folk-horror", "desaturated", "moody"],
+            is_builtin=True,
+        ),
     ]
 
     # ---------- Animation styles ----------
@@ -301,6 +361,48 @@ def _builtin_presets() -> list[Preset]:
             tags=["anime", "90s", "cel", "hand-painted"],
             is_builtin=True,
         ),
+        # 1988 Cyberpunk Anime (Akira / Ghost in the Shell)
+        Preset(
+            id="anim-80s-cyberpunk",
+            name="80s Cyberpunk Anime (Akira Style)",
+            kind="animation",
+            description="Classic hand-drawn 1980s anime cel art, dense mechanical details, retro CRT aesthetic.",
+            model="sdxl", sampler="euler_a", scheduler="karras",
+            steps=30, cfg_scale=7.0,
+            prompt_prefix="1980s retro anime cel screenshot, hand-painted background, high detail cyberpunk aesthetic, dense mechanical details, classic cel shading",
+            prompt_suffix="analog CRT video artifacts, vivid hand-painted highlights, film grain, vintage japanese animation",
+            negative_prompt="modern 3d render, digital smooth gradient, soft blur, disney style",
+            tags=["80s", "cyberpunk", "anime", "akira"],
+            is_builtin=True,
+        ),
+        # Stylized 2.5D Concept Art (Klaus / Stylized 3D)
+        Preset(
+            id="anim-stylized-25d",
+            name="2.5D Painted Stylized Art",
+            kind="animation",
+            description="Rich painterly brushstroke textures on 3D forms with dramatic edge lighting.",
+            model="sdxl", sampler="dpmpp_2m", scheduler="karras",
+            steps=30, cfg_scale=6.5,
+            prompt_prefix="stylized 3D animation still, hand-painted brush stroke texture, dramatic stylized rim lighting, rich color palette, cinematic character framing",
+            prompt_suffix="subsurface scattering, 2.5D illustration aesthetic, crisp edge highlights, artistic concept art",
+            negative_prompt="photorealistic, hyperrealistic photorealism, low poly, default blender render",
+            tags=["stylized", "2.5d", "concept-art", "painterly"],
+            is_builtin=True,
+        ),
+        # French/European Graphic Novel (Moebius Line & Wash)
+        Preset(
+            id="anim-moebius-ink",
+            name="European Graphic Novel (Moebius)",
+            kind="animation",
+            description="Fine ink cross-hatching linework, clean watercolor color wash, surreal sci-fi aesthetic.",
+            model="sdxl", sampler="euler", scheduler="normal",
+            steps=28, cfg_scale=6.5,
+            prompt_prefix="moebius comic book illustration, fine ink cross-hatching linework, clean watercolor color wash, surreal sci-fi landscape",
+            prompt_suffix="vintage graphic novel print texture, high detail line art, matte paper finish",
+            negative_prompt="photorealism, heavy shadows, smooth gradients, 3d render",
+            tags=["moebius", "ink", "line-art", "graphic-novel"],
+            is_builtin=True,
+        ),
     ]
 
     return presets
@@ -337,6 +439,7 @@ class PresetStore:
                     kind            TEXT NOT NULL DEFAULT 'live_action',
                     era             TEXT NOT NULL DEFAULT '',
                     description     TEXT NOT NULL DEFAULT '',
+                    image_url       TEXT NOT NULL DEFAULT '',
                     model           TEXT NOT NULL DEFAULT '',
                     loras_json      TEXT NOT NULL DEFAULT '[]',
                     sampler         TEXT NOT NULL DEFAULT 'euler',
@@ -498,6 +601,7 @@ class PresetStore:
         return Preset(
             id=row["id"], name=row["name"], kind=row["kind"],
             era=row["era"], description=row["description"],
+            image_url=row["image_url"] if "image_url" in row.keys() and row["image_url"] else f"/presets/{row['id']}.jpg",
             model=row["model"], loras=json.loads(row["loras_json"]),
             sampler=row["sampler"], scheduler=row["scheduler"],
             steps=row["steps"], cfg_scale=row["cfg_scale"],

@@ -68,14 +68,6 @@ def _cinema():
 
 def _bus(db_dir: Path):
     from directo.platform.events import EventBus
-    return EventBus(db_path=db_dir / "events.db")
-
-
-def _costs(db_dir: Path):
-    from directo.platform.costs import CostTracker
-    return CostTracker(db_dir / "costs.db")
-
-
 # =====================================================================
 # CLI
 # =====================================================================
@@ -107,11 +99,9 @@ def build_cli():
         as_json: bool = ctx.obj["as_json"]
         q = _queue(db_dir)
         g = _gallery(db_dir)
-        c = _costs(db_dir)
         snap = {
             "queue": q.stats(),
             "gallery": {"total": g.count(), "stats": g.stats()},
-            "costs_total_usd": c.total(),
         }
         if as_json:
             click.echo(json.dumps(snap, indent=2, default=str))
@@ -119,8 +109,7 @@ def build_cli():
             click.echo("Directo status:")
             click.echo(f"  queue: {snap['queue']}")
             click.echo(f"  gallery: {snap['gallery']['total']} images")
-            click.echo(f"  total cost: ${snap['costs_total_usd']:.4f}")
-        q.close(); g.close(); c.close()
+        q.close(); g.close()
 
     # ----------------- gallery -----------------
 

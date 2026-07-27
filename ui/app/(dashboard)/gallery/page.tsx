@@ -8,7 +8,9 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/empty-state";
-import { Star, Search, Image as ImageIcon } from "lucide-react";
+import { NPanel } from "@/components/n-panel";
+import { SplitViewport } from "@/components/split-viewport";
+import { Star, Search, Image as ImageIcon, Eye, SlidersHorizontal } from "lucide-react";
 import { cn, formatRelativeTime, shortId, truncate } from "@/lib/utils";
 import type { ImageRecord } from "@/lib/types";
 
@@ -18,6 +20,9 @@ export default function GalleryPage() {
   const [favorites, setFavorites] = useState(false);
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(48);
+
+  const [selectedItem, setSelectedItem] = useState<ImageRecord | null>(null);
+  const [compareItems, setCompareItems] = useState<ImageRecord[]>([]);
 
   const params = new URLSearchParams({
     project,
@@ -121,61 +126,142 @@ export default function GalleryPage() {
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {items.map((rec) => (
-            <Card key={rec.id} className="overflow-hidden group">
-              <div className="aspect-square bg-bg-muted flex items-center justify-center text-fg-subtle">
-                <ImageIcon className="h-12 w-12" />
-              </div>
-              <CardContent className="p-3 space-y-2">
-                <p
-                  className="text-xs text-fg line-clamp-2"
-                  title={rec.prompt}
-                >
-                  {truncate(rec.prompt, 100)}
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => rateImage(rec.id, n === rec.rating ? 0 : n)}
-                        className="p-0.5 rounded hover:bg-bg-muted"
-                        title={`Rate ${n}`}
-                      >
-                        <Star
-                          className={cn(
-                            "h-3.5 w-3.5",
-                            n <= rec.rating
-                              ? "fill-warning text-warning"
-                              : "text-fg-subtle",
-                          )}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  <span className="text-xs text-fg-subtle">
-                    {formatRelativeTime(rec.created_at)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  {rec.project && (
-                    <Badge variant="brand">{rec.project}</Badge>
+          {items.map((rec) => {
+            const isCompared = compareItems.some((c) => c.id === rec.id);
+            return (
+              <Card
+                key={rec.id}
+                className="overflow-hidden group hover:border-accent/50 transition-colors cursor-pointer"
+                onClick={() => setSelectedItem(rec)}
+              >
+                <div className="relative aspect-square bg-bg-muted flex items-center justify-center text-fg-subtle overflow-hidden">
+                  {rec.url ? (
+                    <img
+                      src={rec.url}
+                      alt={rec.prompt}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <ImageIcon className="h-12 w-12" />
                   )}
-                  <span className="text-fg-subtle font-mono">
-                    {shortId(rec.id)}
-                  </span>
-                </div>
-                {rec.tags && rec.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {rec.tags.slice(0, 3).map((t) => (
-                      <Badge key={t}>{t}</Badge>
-                    ))}
+
+                  {/* Hover Quick Actions Overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button
+                      variant="secondary"
+                      className="h-8 px-2 text-xs bg-bg/80 backdrop-blur-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedItem(rec);
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1 text-accent" />
+                      Inspect (N)
+                    </Button>
+                    <Button
+                      variant={isCompared ? "primary" : "secondary"}
+                      className="h-8 px-2 text-xs bg-bg/80 backdrop-blur-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isCompared) {
+                          setCompareItems(compareItems.filter((c) => c.id !== rec.id));
+                        } else {
+                          if (compareItems.length >= 2) {
+                            setCompareItems([compareItems[1], rec]);
+                          } else {
+                            setCompareItems([...compareItems, rec]);
+                          }
+                        }
+                      }}
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5 mr-1" />
+                      {isCompared ? "Selected" : "Compare"}
+                    </Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </div>
+
+                <CardContent className="p-3 space-y-2">
+                  <p
+                    className="text-xs text-fg line-clamp-2"
+                    title={rec.prompt}
+                  >
+                    {truncate(rec.prompt, 100)}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => rateImage(rec.id, n === rec.rating ? 0 : n)}
+                          className="p-0.5 rounded hover:bg-bg-muted"
+                          title={`Rate ${n}`}
+                        >
+                          <Star
+                            className={cn(
+                              "h-3.5 w-3.5",
+                              n <= rec.rating
+                                ? "fill-warning text-warning"
+                                : "text-fg-subtle",
+                            )}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-xs text-fg-subtle font-mono">
+                      {formatRelativeTime(rec.created_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    {rec.project && (
+                      <Badge variant="brand">{rec.project}</Badge>
+                    )}
+                    <span className="text-fg-subtle font-mono">
+                      {shortId(rec.id)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      )}
+
+      {/* Floating Compare Bar */}
+      {compareItems.length > 0 && (
+        <div className="fixed bottom-10 right-6 z-30 bg-bg-subtle border border-border p-3 rounded-lg shadow-2xl flex items-center gap-3 animate-fade-in font-mono text-xs">
+          <span>Comparing {compareItems.length}/2 images</span>
+          {compareItems.length === 2 && (
+            <Button
+              variant="primary"
+              className="h-7 text-xs"
+              onClick={() => {}}
+            >
+              Open Split Viewport
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            className="h-7 text-xs"
+            onClick={() => setCompareItems([])}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
+
+      {/* Modals */}
+      <NPanel
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onRate={(id, r) => rateImage(id, r)}
+      />
+
+      {compareItems.length === 2 && (
+        <SplitViewport
+          itemA={compareItems[0]}
+          itemB={compareItems[1]}
+          onClose={() => setCompareItems([])}
+        />
       )}
     </div>
   );

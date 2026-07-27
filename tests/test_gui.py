@@ -37,7 +37,7 @@ def test_get_services_caches(workspace):
     b = get_services(str(workspace))
     assert a is b
     # All expected services present
-    expected = {"queue", "gallery", "presets", "costs", "bus", "cache", "webhooks"}
+    expected = {"queue", "gallery", "presets", "bus", "cache", "webhooks"}
     assert expected <= set(a.keys())
 
 

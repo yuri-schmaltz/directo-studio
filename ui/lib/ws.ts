@@ -13,11 +13,14 @@ export function wsUrl(path: string = "/ws/events"): string {
   if (explicit) {
     return explicit.replace(/\/$/, "") + path;
   }
-  if (typeof window !== "undefined") {
-    const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${proto}://${window.location.host}${path}`;
+  const backendUrl = process.env.NEXT_PUBLIC_DIRECTO_API_URL || "http://localhost:8000";
+  try {
+    const parsed = new URL(backendUrl, typeof window !== "undefined" ? window.location.href : "http://localhost:8000");
+    const proto = parsed.protocol === "https:" ? "wss" : "ws";
+    return `${proto}://${parsed.host}${path}`;
+  } catch {
+    return `ws://localhost:8000${path}`;
   }
-  return `ws://localhost:8000${path}`;
 }
 
 export function useEventStream(options: {

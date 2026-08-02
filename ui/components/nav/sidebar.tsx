@@ -37,7 +37,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "Overview",
     items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard, shortcut: "Alt+1" },
+      { href: "/projects", label: "Projects", icon: FolderKanban, shortcut: "Alt+1" },
     ],
   },
   {
@@ -55,7 +55,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/gallery", label: "Gallery", icon: Image, shortcut: "Alt+2" },
       { href: "/jobs", label: "Jobs", icon: Workflow, shortcut: "Alt+3" },
-      { href: "/projects", label: "Projects", icon: FolderKanban, shortcut: "Alt+6" },
     ],
   },
   {
@@ -73,11 +72,11 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col md:w-60 md:fixed md:top-0 md:bottom-7 z-40 border-r border-border bg-bg-subtle select-none">
       {/* Header Brand */}
-      <div className="flex items-center gap-2.5 px-4 h-13 border-b border-border shrink-0">
+      <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border shrink-0">
         <Target className="h-5 w-5 text-accent" />
         <span className="font-semibold text-fg tracking-tight text-base">Directo Studio</span>
         <span className="text-[10px] font-mono text-accent/80 ml-auto bg-accent/10 px-1.5 py-0.5 rounded border border-accent/20">
-          v0.23
+          v1.1.5
         </span>
       </div>
 

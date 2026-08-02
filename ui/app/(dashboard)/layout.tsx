@@ -87,7 +87,7 @@ export default function DashboardLayout({
             {children}
           </main>
         </div>
-        <div className="md:pl-60 w-full fixed bottom-0 z-30">
+        <div className="w-full fixed bottom-0 left-0 right-0 z-50">
           <StatusBar />
         </div>
 
@@ -100,7 +100,7 @@ export default function DashboardLayout({
             />
             <div className="absolute inset-y-0 left-0 w-64 bg-bg border-r border-border p-4 flex flex-col gap-4 overflow-y-auto">
               <div className="flex items-center justify-between">
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/projects" className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-accent" />
                   <span className="font-semibold text-fg font-sans">Directo Studio</span>
                 </Link>

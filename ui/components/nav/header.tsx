@@ -41,7 +41,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           <Menu className="h-4 w-4" />
         </Button>
-        <Link href="/" className="flex items-center gap-2 md:hidden">
+        <Link href="/projects" className="flex items-center gap-2 md:hidden">
           <Target className="h-4 w-4 text-accent" />
           <span className="font-semibold text-sm">Directo Studio</span>
         </Link>

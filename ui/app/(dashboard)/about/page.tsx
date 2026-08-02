@@ -96,7 +96,7 @@ export default function AboutPage() {
             />
             <div className="pt-3 border-t border-border flex items-center justify-between">
               <span className="font-medium">Total</span>
-              <Badge variant="brand">207/207 tests</Badge>
+              <Badge variant="brand">283/283 tests</Badge>
             </div>
           </CardContent>
         </Card>

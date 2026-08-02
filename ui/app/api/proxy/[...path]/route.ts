@@ -52,7 +52,11 @@ async function forward(
   let path = pathParts.join("/");
   // Pass-through: keep the original API path verbatim, but prepend `/api/` if it's
   // not health, metrics, or already starting with `api/` to avoid 404s for client calls.
-  if (path !== "health" && path !== "metrics" && !path.startsWith("api/")) {
+  if (
+    !path.startsWith("health") &&
+    !path.startsWith("metrics") &&
+    !path.startsWith("api/")
+  ) {
     path = `api/${path}`;
   }
   const url = `${BACKEND}/${path}${req.nextUrl.search}`;

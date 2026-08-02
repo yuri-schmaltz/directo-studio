@@ -22,10 +22,6 @@ const nextConfig = {
         source: "/api/backend/:path*",
         destination: `${backend}/:path*`,
       },
-      {
-        source: "/api/proxy/:path*",
-        destination: `${backend}/:path*`,
-      },
     ];
   },
 };

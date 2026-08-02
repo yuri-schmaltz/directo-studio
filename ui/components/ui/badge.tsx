@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import * as React from "react";
 
-type Variant = "default" | "success" | "warning" | "danger" | "brand";
+type Variant = "default" | "success" | "warning" | "danger" | "brand" | "accent" | "outline";
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: Variant;
@@ -13,6 +13,8 @@ const variantClasses: Record<Variant, string> = {
   warning: "badge badge-warning",
   danger: "badge badge-danger",
   brand: "badge badge-brand",
+  accent: "badge badge-brand",
+  outline: "badge border border-border text-fg-subtle bg-transparent",
 };
 
 export function Badge({

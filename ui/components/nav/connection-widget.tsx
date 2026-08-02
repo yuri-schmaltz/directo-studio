@@ -40,11 +40,6 @@ export function ConnectionWidget() {
 
   return (
     <div className="relative flex items-center gap-2" ref={popoverRef}>
-      {/* Live Status Pill */}
-      <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-full bg-bg-muted/80 border border-border/60">
-        <LiveIndicator state={state} className="text-[11px]" />
-      </div>
-
       {/* Bell Button */}
       <button
         onClick={handleToggle}

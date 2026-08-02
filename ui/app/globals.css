@@ -142,4 +142,19 @@
   .stagger-3 { animation-delay: 150ms; }
   .stagger-4 { animation-delay: 200ms; }
   .stagger-5 { animation-delay: 250ms; }
+
+  .aspect-cinematic {
+    aspect-ratio: 2.39 / 1;
+  }
+
+  .cinema-frame-guides {
+    background-image: 
+      linear-gradient(to right, rgba(245, 158, 11, 0.2) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(245, 158, 11, 0.2) 1px, transparent 1px);
+    background-size: 33.333% 33.333%;
+  }
+
+  .monitor-frame {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 20px 40px -15px rgba(0, 0, 0, 0.8);
+  }
 }

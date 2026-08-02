@@ -13,32 +13,33 @@ import { cn } from "@/lib/utils";
 
 const MOBILE_NAV_GROUPS = [
   {
-    title: "Overview",
-    items: [{ href: "/", label: "Dashboard" }],
+    title: "Projeto & Conceito",
+    items: [
+      { href: "/projects", label: "Projetos" },
+      { href: "/style-bible", label: "Bíblia de Estilo" },
+      { href: "/presets", label: "Presets" },
+    ],
   },
   {
-    title: "Studio & Creation",
+    title: "Produção & Geração",
     items: [
       { href: "/cinema", label: "Cinema Engine" },
-      { href: "/animatics", label: "Animatics" },
-      { href: "/presets", label: "Presets" },
-      { href: "/style-bible", label: "Style Bible" },
+      { href: "/animatics", label: "Animáticas" },
       { href: "/media-hub", label: "Media Hub" },
     ],
   },
   {
-    title: "Management & Assets",
+    title: "Assets & Execução",
     items: [
-      { href: "/gallery", label: "Gallery" },
-      { href: "/jobs", label: "Jobs" },
-      { href: "/projects", label: "Projects" },
+      { href: "/gallery", label: "Galeria" },
+      { href: "/jobs", label: "Fila de Render" },
     ],
   },
   {
-    title: "System & Metrics",
+    title: "Sistema",
     items: [
-      { href: "/settings", label: "Settings" },
-      { href: "/about", label: "About" },
+      { href: "/settings", label: "Configurações" },
+      { href: "/about", label: "Sobre" },
     ],
   },
 ];
@@ -57,12 +58,12 @@ export default function DashboardLayout({
         e.preventDefault();
         const index = parseInt(e.key, 10) - 1;
         const routes = [
-          "/",
+          "/projects",
           "/gallery",
           "/jobs",
           "/presets",
           "/cinema",
-          "/projects",
+          "/",
           "/animatics",
           "/style-bible",
           "/media-hub",

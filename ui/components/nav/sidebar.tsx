@@ -35,33 +35,33 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    title: "Overview",
+    title: "Projeto & Conceito",
     items: [
-      { href: "/projects", label: "Projects", icon: FolderKanban, shortcut: "Alt+1" },
+      { href: "/projects", label: "Projetos", icon: FolderKanban, shortcut: "Alt+1" },
+      { href: "/style-bible", label: "Bíblia de Estilo", icon: BookOpen, shortcut: "Alt+8" },
+      { href: "/presets", label: "Presets", icon: Palette, shortcut: "Alt+4" },
     ],
   },
   {
-    title: "Studio & Creation",
+    title: "Produção & Geração",
     items: [
       { href: "/cinema", label: "Cinema Engine", icon: Clapperboard, shortcut: "Alt+5" },
-      { href: "/animatics", label: "Animatics", icon: Film, shortcut: "Alt+7" },
-      { href: "/presets", label: "Presets", icon: Palette, shortcut: "Alt+4" },
-      { href: "/style-bible", label: "Style Bible", icon: BookOpen, shortcut: "Alt+8" },
+      { href: "/animatics", label: "Animáticas", icon: Film, shortcut: "Alt+7" },
       { href: "/media-hub", label: "Media Hub", icon: Zap, shortcut: "Alt+9" },
     ],
   },
   {
-    title: "Management & Assets",
+    title: "Assets & Execução",
     items: [
-      { href: "/gallery", label: "Gallery", icon: Image, shortcut: "Alt+2" },
-      { href: "/jobs", label: "Jobs", icon: Workflow, shortcut: "Alt+3" },
+      { href: "/gallery", label: "Galeria", icon: Image, shortcut: "Alt+2" },
+      { href: "/jobs", label: "Fila de Render", icon: Workflow, shortcut: "Alt+3" },
     ],
   },
   {
-    title: "System & Metrics",
+    title: "Sistema",
     items: [
-      { href: "/settings", label: "Settings", icon: Settings },
-      { href: "/about", label: "About", icon: Info },
+      { href: "/settings", label: "Configurações", icon: Settings },
+      { href: "/about", label: "Sobre", icon: Info },
     ],
   },
 ];

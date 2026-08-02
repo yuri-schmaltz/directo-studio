@@ -657,11 +657,14 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         return {"items": project_memory.list_projects()}
 
     @app.get("/api/projects/{project_id}")
-    def projects_get(project_id: str) -> dict[str, Any]:
+    @app.patch("/api/projects/{project_id}")
+    @app.put("/api/projects/{project_id}")
+    def projects_update(project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         p = project_memory.get_project(project_id)
         if not p:
             raise HTTPException(404, "project not found")
-        return p
+        project_memory.update_project(project_id, **payload)
+        return project_memory.get_project(project_id) or {}
 
     @app.delete("/api/projects/{project_id}")
     def projects_delete(project_id: str) -> dict[str, Any]:
@@ -679,6 +682,35 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
             model_hint=payload.get("target", "flux-dev"),
         )
         return {"original": result, "enriched": result}  # already a string
+
+    # ============================================================
+    # OpenMontage Agentic Video Production Pipelines
+    # ============================================================
+
+    @app.get("/api/openmontage/pipelines")
+    def openmontage_pipelines() -> dict[str, Any]:
+        from directo.engine.openmontage_bridge import openmontage_bridge
+        return {"items": openmontage_bridge.list_pipelines(), "count": len(openmontage_bridge.list_pipelines())}
+
+    @app.post("/api/openmontage/render")
+    def openmontage_render(payload: dict[str, Any]) -> dict[str, Any]:
+        from directo.engine.openmontage_bridge import openmontage_bridge
+        job_data = openmontage_bridge.prepare_pipeline_job(
+            payload.get("project_id", "default"),
+            payload.get("pipeline_id", "cyberpunk_trailer"),
+            payload.get("prompt", "")
+        )
+        job_id = queue.enqueue("openmontage_render", job_data)
+        bus.publish(EventKind.JOB_QUEUED, {"job_id": job_id, "kind": "openmontage_render"})
+        return {"job_id": job_id, "status": "queued", "data": job_data}
+
+    @app.post("/api/openmontage/reference-video")
+    def openmontage_reference_video(payload: dict[str, Any]) -> dict[str, Any]:
+        from directo.engine.openmontage_bridge import openmontage_bridge
+        return openmontage_bridge.analyze_reference_video(
+            payload.get("url", "https://youtube.com/watch?v=sample"),
+            payload.get("topic", "quantum computing")
+        )
 
     # ============================================================
     # Storyboard PDF export

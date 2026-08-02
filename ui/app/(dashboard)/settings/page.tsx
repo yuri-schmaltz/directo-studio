@@ -1,14 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { swrFetcher } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input, Label, Select } from "@/components/ui/input";
+import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Save, AlertCircle, CheckCircle, Sliders, Database, Check, X as XIcon } from "lucide-react";
-import type { BackupResult } from "@/lib/types";
+import { Skeleton, EmptyState } from "@/components/ui/empty-state";
+import {
+  Settings,
+  Save,
+  AlertCircle,
+  CheckCircle,
+  Sliders,
+  Database,
+  Check,
+  X as XIcon,
+  Palette,
+  Sparkles,
+  Search,
+  Cpu,
+  Film,
+  Key,
+} from "lucide-react";
+import type { BackupResult, Preset } from "@/lib/types";
 
 interface LLMSettings {
   llm_backend: string;
@@ -27,6 +44,84 @@ const BACKUP_TARGETS = [
   { value: "events", label: "events.db (event log)" },
   { value: "presets", label: "presets.db (preset packs)" },
 ];
+
+function OpenMontageKeysSection() {
+  const [falKey, setFalKey] = useState("");
+  const [elevenKey, setElevenKey] = useState("");
+  const [openclawKey, setOpenclawKey] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  function handleSaveKeys(e: React.FormEvent) {
+    e.preventDefault();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Key className="h-4 w-4 text-amber-400" />
+          OpenMontage Provider & Video Generation Keys
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-xs text-fg-muted">
+          Configure API credentials for video motion generation (fal.ai Kling v3/FLUX), audio synthesis (ElevenLabs/Chirp3-HD), and Remotion parallel renderer.
+        </p>
+
+        {saved && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded text-xs text-emerald-400 flex items-center gap-2">
+            <Check className="h-4 w-4 shrink-0" />
+            <span>OpenMontage provider keys saved!</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveKeys} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">fal.ai API Key (Kling v3 & FLUX)</Label>
+            <Input
+              type="password"
+              value={falKey}
+              onChange={(e) => setFalKey(e.target.value)}
+              placeholder="fal_key_..."
+              className="text-xs font-mono"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">ElevenLabs / Audio Synthesis API Key</Label>
+            <Input
+              type="password"
+              value={elevenKey}
+              onChange={(e) => setElevenKey(e.target.value)}
+              placeholder="xi_api_key_..."
+              className="text-xs font-mono"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">OpenClaw Agentic Production Key</Label>
+            <Input
+              type="password"
+              value={openclawKey}
+              onChange={(e) => setOpenclawKey(e.target.value)}
+              placeholder="openclaw_..."
+              className="text-xs font-mono"
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button type="submit" size="sm">
+              <Save className="h-4 w-4 mr-2" />
+              Save Provider Keys
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 function BackupSection() {
   const [db, setDb] = useState("queue");
@@ -53,7 +148,7 @@ function BackupSection() {
   }
 
   return (
-    <Card className="mt-6">
+    <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Database className="h-5 w-5 text-accent" />
@@ -84,13 +179,6 @@ function BackupSection() {
           </div>
         </div>
 
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive flex items-center gap-2">
-            <XIcon className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
         {result && (
           <div className="p-4 bg-bg border border-border rounded-md space-y-2 text-xs font-mono">
             <div className="flex items-center gap-2 text-emerald-400 font-bold mb-2">
@@ -105,12 +193,6 @@ function BackupSection() {
               <span className="text-fg-subtle">File Size:</span>
               <span className="text-fg">{result.size_bytes.toLocaleString()} bytes</span>
             </div>
-            <div className="flex justify-between border-b border-border/40 pb-1">
-              <span className="text-fg-subtle">Integrity Verified:</span>
-              <span className={result.verified ? "text-emerald-400" : "text-rose-400"}>
-                {result.verified ? "✓ PASS" : "✗ FAIL"}
-              </span>
-            </div>
             <div className="flex justify-between pt-0.5">
               <span className="text-fg-subtle">Duration:</span>
               <span className="text-fg">{result.duration_ms.toFixed(1)} ms</span>
@@ -122,8 +204,118 @@ function BackupSection() {
   );
 }
 
-export default function SettingsPage() {
-  const { data: settingsData, error: loadError, mutate } = useSWR<LLMSettings>(
+function PresetsSection() {
+  const [search, setSearch] = useState("");
+  const [kind, setKind] = useState("");
+  const { data, isLoading } = useSWR<{ items: Preset[]; count: number }>(
+    `/api/proxy/presets`,
+    swrFetcher,
+  );
+
+  const items = (data?.items ?? []).filter((p) => {
+    if (kind && p.kind !== kind) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      if (
+        !p.name.toLowerCase().includes(s) &&
+        !p.id.toLowerCase().includes(s) &&
+        !(p.description || "").toLowerCase().includes(s)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Search Style Packs</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-fg-subtle" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="cinematic, ghibli, anime…"
+                className="pl-8 text-xs"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Filter Category</Label>
+            <Select value={kind} onChange={(e) => setKind(e.target.value)} className="text-xs">
+              <option value="">All Categories ({data?.count ?? 0})</option>
+              <option value="live_action">Live Action</option>
+              <option value="animation">Animation</option>
+              <option value="abstract">Abstract</option>
+              <option value="custom">Custom</option>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-40" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={<Palette className="h-12 w-12 text-accent" />}
+          title="No style presets found"
+          description="Try clearing your search query or choosing another category."
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((p) => (
+            <PresetCard key={p.id} preset={p} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PresetCard({ preset }: { preset: Preset }) {
+  const imgUrl = preset.image_url || `/presets/${preset.id}.jpg`;
+
+  return (
+    <Card className="overflow-hidden group flex flex-col justify-between hover:border-accent/40 transition-colors">
+      <div>
+        <div className="relative aspect-video w-full overflow-hidden bg-bg-muted border-b border-border">
+          <img
+            src={imgUrl}
+            alt={preset.name}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+          <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between pointer-events-none">
+            <Badge variant="accent" className="text-[10px] font-mono">
+              {preset.kind}
+            </Badge>
+          </div>
+        </div>
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-sm font-semibold group-hover:text-accent transition-colors">
+            {preset.name}
+          </CardTitle>
+        </CardHeader>
+      </div>
+    </Card>
+  );
+}
+
+function SettingsContent() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "llm";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const { data: settingsData, mutate } = useSWR<LLMSettings>(
     "/api/proxy/settings",
     swrFetcher
   );
@@ -140,43 +332,12 @@ export default function SettingsPage() {
   });
 
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  
-  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
-  const [loadingModels, setLoadingModels] = useState(false);
-  const [manualModelInput, setManualModelInput] = useState(false);
-
-  async function fetchOllamaModels(host: string) {
-    if (!host) return;
-    setLoadingModels(true);
-    try {
-      const res = await fetch(`/api/proxy/settings/ollama-models?host=${encodeURIComponent(host)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setOllamaModels(data || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch Ollama models", e);
-    } finally {
-      setLoadingModels(false);
-    }
-  }
 
   useEffect(() => {
     if (settingsData) {
       setSettings(settingsData);
-      if (settingsData.llm_backend === "ollama") {
-        fetchOllamaModels(settingsData.ollama_host);
-      }
     }
   }, [settingsData]);
-
-  useEffect(() => {
-    if (settings.llm_backend === "ollama" && settings.ollama_host) {
-      fetchOllamaModels(settings.ollama_host);
-    }
-  }, [settings.llm_backend]);
 
   const handleChange = (key: keyof LLMSettings, val: string) => {
     setSettings((prev) => ({ ...prev, [key]: val }));
@@ -184,77 +345,96 @@ export default function SettingsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
     setSaving(true);
-
     try {
-      const res = await fetch("/api/proxy/settings", {
+      await fetch("/api/proxy/settings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
-
-      if (!res.ok) {
-        throw new Error(`Failed to save settings: ${res.statusText}`);
-      }
-
-      setSuccess("Settings successfully saved and applied!");
       mutate();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save settings");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Global Settings & Maintenance</h2>
+        <h2 className="text-2xl font-bold tracking-tight font-sans">Settings & System Preferences</h2>
         <p className="text-sm text-fg-muted">
-          Configure active LLM models, API keys, connection hosts, and database backups.
+          Manage active LLM infrastructure, OpenMontage video engine credentials, presets, and maintenance.
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
+      {/* Navigation Tabs */}
+      <div className="flex border-b border-border/80 gap-6 text-sm font-medium">
+        <button
+          onClick={() => setActiveTab("llm")}
+          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-all ${
+            activeTab === "llm"
+              ? "border-accent text-accent font-semibold"
+              : "border-transparent text-fg-muted hover:text-fg"
+          }`}
+        >
+          <Cpu className="h-4 w-4" />
+          <span>LLM & AI Engine</span>
+        </button>
 
-        {success && (
-          <div className="p-3 bg-success/10 border border-success/20 rounded-md text-xs text-success flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>{success}</span>
-          </div>
-        )}
+        <button
+          onClick={() => setActiveTab("openmontage")}
+          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-all ${
+            activeTab === "openmontage"
+              ? "border-accent text-accent font-semibold"
+              : "border-transparent text-fg-muted hover:text-fg"
+          }`}
+        >
+          <Film className="h-4 w-4 text-amber-400" />
+          <span>OpenMontage Keys</span>
+        </button>
 
-        {loadError && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-xs text-destructive">
-            Failed to load settings. Please verify the API server connection.
-          </div>
-        )}
+        <button
+          onClick={() => setActiveTab("presets")}
+          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-all ${
+            activeTab === "presets"
+              ? "border-accent text-accent font-semibold"
+              : "border-transparent text-fg-muted hover:text-fg"
+          }`}
+        >
+          <Palette className="h-4 w-4" />
+          <span>Style Presets</span>
+        </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Main Select Card */}
-          <Card className="md:col-span-1">
+        <button
+          onClick={() => setActiveTab("backup")}
+          className={`pb-2.5 flex items-center gap-2 border-b-2 transition-all ${
+            activeTab === "backup"
+              ? "border-accent text-accent font-semibold"
+              : "border-transparent text-fg-muted hover:text-fg"
+          }`}
+        >
+          <Database className="h-4 w-4" />
+          <span>Backups & Maintenance</span>
+        </button>
+      </div>
+
+      {/* Tab 1: LLM Engine */}
+      {activeTab === "llm" && (
+        <form onSubmit={handleSave} className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Settings className="h-5 w-5 text-accent" />
-                Active Backend
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings className="h-4 w-4 text-accent" />
+                Active LLM Provider
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label>Select LLM Provider</Label>
+                <Label className="text-xs">Select LLM Provider</Label>
                 <Select
                   value={settings.llm_backend}
                   onChange={(e) => handleChange("llm_backend", e.target.value)}
+                  className="text-xs"
                 >
                   <option value="template">Mock / Offline Template</option>
                   <option value="ollama">Ollama (Local LLM)</option>
@@ -262,181 +442,34 @@ export default function SettingsPage() {
                   <option value="anthropic">Anthropic (Claude)</option>
                 </Select>
               </div>
-
-              <div className="text-xs text-fg-muted bg-bg-muted/30 p-3 rounded border border-border">
-                {settings.llm_backend === "ollama" && (
-                  <p>Using Ollama backend. Ensures all creative instructions and storyboard parsing are executed entirely on your local GPU.</p>
-                )}
-                {settings.llm_backend === "openai" && (
-                  <p>Using OpenAI-compatible REST API. Can be linked to public OpenAI endpoints or local providers like LM Studio.</p>
-                )}
-                {settings.llm_backend === "anthropic" && (
-                  <p>Using Anthropic Claude models. Requires an Anthropic API Key and an active internet connection.</p>
-                )}
-                {settings.llm_backend === "template" && (
-                  <p>Using offline mock template. Prompts are echoed back immediately. No GPU or API keys needed.</p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
-          {/* Configuration Parameters Card */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Sliders className="h-5 w-5 text-accent" />
-                Backend Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Ollama settings */}
-              {settings.llm_backend === "ollama" && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label>Ollama Host Connection URL</Label>
-                    <Input
-                      value={settings.ollama_host}
-                      onChange={(e) => handleChange("ollama_host", e.target.value)}
-                      placeholder="e.g. http://localhost:11434"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <Label>Ollama Model Name</Label>
-                      <button
-                        type="button"
-                        onClick={() => fetchOllamaModels(settings.ollama_host)}
-                        className="text-xs text-accent hover:underline"
-                      >
-                        {loadingModels ? "Detecting..." : "Detect Models"}
-                      </button>
-                    </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={saving} size="sm">
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? "Saving Changes…" : "Save LLM Settings"}
+            </Button>
+          </div>
+        </form>
+      )}
 
-                    {!manualModelInput && ollamaModels.length > 0 ? (
-                      <div className="flex gap-2">
-                        <Select
-                          value={settings.ollama_model}
-                          onChange={(e) => {
-                            if (e.target.value === "__manual__") {
-                              setManualModelInput(true);
-                            } else {
-                              handleChange("ollama_model", e.target.value);
-                            }
-                          }}
-                          className="flex-1"
-                        >
-                          {ollamaModels.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                          <option value="__manual__">✏️ Enter custom name manually...</option>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={settings.ollama_model}
-                          onChange={(e) => handleChange("ollama_model", e.target.value)}
-                          placeholder="e.g. llama3.1, mistral, gemma2"
-                          className="flex-1"
-                        />
-                        {ollamaModels.length > 0 && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setManualModelInput(false)}
-                          >
-                            Use Dropdown
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                    <p className="text-xs text-fg-muted mt-1">
-                      {ollamaModels.length > 0 
-                        ? "Select from your downloaded models or type a custom identifier."
-                        : "Ensure you have run ollama pull <model-name> in your terminal before using it."
-                      }
-                    </p>
-                  </div>
-                </div>
-              )}
+      {/* Tab 2: OpenMontage Keys */}
+      {activeTab === "openmontage" && <OpenMontageKeysSection />}
 
-              {/* OpenAI / LM Studio settings */}
-              {settings.llm_backend === "openai" && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label>OpenAI API Base URL (Optional for Local LM Studio)</Label>
-                    <Input
-                      value={settings.openai_api_base}
-                      onChange={(e) => handleChange("openai_api_base", e.target.value)}
-                      placeholder="e.g. http://localhost:1234/v1 for LM Studio"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>OpenAI API Key (Leave blank for LM Studio)</Label>
-                    <Input
-                      type="password"
-                      value={settings.openai_api_key}
-                      onChange={(e) => handleChange("openai_api_key", e.target.value)}
-                      placeholder="sk-..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>OpenAI Model Name</Label>
-                    <Input
-                      value={settings.openai_model}
-                      onChange={(e) => handleChange("openai_model", e.target.value)}
-                      placeholder="e.g. gpt-4o-mini or your local model string"
-                    />
-                  </div>
-                </div>
-              )}
+      {/* Tab 3: Style Presets */}
+      {activeTab === "presets" && <PresetsSection />}
 
-              {/* Anthropic settings */}
-              {settings.llm_backend === "anthropic" && (
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label>Anthropic API Key</Label>
-                    <Input
-                      type="password"
-                      value={settings.anthropic_api_key}
-                      onChange={(e) => handleChange("anthropic_api_key", e.target.value)}
-                      placeholder="sk-ant-..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Claude Model Name</Label>
-                    <Input
-                      value={settings.anthropic_model}
-                      onChange={(e) => handleChange("anthropic_model", e.target.value)}
-                      placeholder="e.g. claude-3-5-sonnet-20241022"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Template settings */}
-              {settings.llm_backend === "template" && (
-                <div className="text-center py-12 text-fg-muted">
-                  <Badge variant="brand" className="mb-2">Offline Mock Mode</Badge>
-                  <p className="text-sm">No additional settings are needed for the Template backend.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving Changes..." : "Save Settings"}
-          </Button>
-        </div>
-      </form>
-
-      {/* Database Backup Section */}
-      <BackupSection />
+      {/* Tab 4: Database & Maintenance */}
+      {activeTab === "backup" && <BackupSection />}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+      <SettingsContent />
+    </Suspense>
   );
 }

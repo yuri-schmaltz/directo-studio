@@ -181,13 +181,19 @@ class ProjectMemory:
         with self._lock:
             self._conn.execute(f"UPDATE projects SET {cols} WHERE id = ?", params)
 
-    def list_projects(self, limit: int = 100) -> list[dict[str, Any]]:
+    def list_projects(self, limit: int = 1000) -> list[dict[str, Any]]:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT id, name, concept, updated_at FROM projects "
+                "SELECT id, name, concept, logline, style_json, metadata_json, updated_at FROM projects "
                 "ORDER BY updated_at DESC LIMIT ?", (limit,)
             ).fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["style"] = json.loads(d.pop("style_json") or "{}")
+            d["metadata"] = json.loads(d.pop("metadata_json") or "{}")
+            result.append(d)
+        return result
 
     def delete_project(self, project_id: str) -> None:
         with self._lock:

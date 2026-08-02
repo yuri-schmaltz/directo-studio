@@ -231,8 +231,9 @@ ensure_service() {
     # `&` backgrounds it; the subshell exits immediately, leaving the child
     # running. The child's stdout/stderr are already redirected to $log_file.
     (
-        eval "$start_cmd" >> "$log_file" 2>&1 &
-        echo $! > "$pid_file"
+        nohup setsid bash -c "$start_cmd" >> "$log_file" 2>&1 &
+        pid=$!
+        echo "$pid" > "$pid_file"
     )
     wait_for "$health_url" "$name" "$log_file"
     ok "$name up (pid $(cat "$pid_file"))"
@@ -284,7 +285,7 @@ ensure_service \
     "$API_PORT" \
     "$BACKEND_LOG" \
     "$BACKEND_PID_FILE" \
-    "cd '$ROOT' && '$VENV_PY' -m directo.platform.cli --db-dir '$DATA_DIR' server --host '$API_HOST' --port '$API_PORT'"
+    "cd '$ROOT' && nohup '$VENV_PY' -m directo.platform.cli --db-dir '$DATA_DIR' server --host '$API_HOST' --port '$API_PORT'"
 
 # 5. UI deps
 if [ "$NODE_OK" -eq 0 ]; then
@@ -307,7 +308,7 @@ ensure_service \
     "$UI_PORT" \
     "$FRONTEND_LOG" \
     "$FRONTEND_PID_FILE" \
-    "cd '$ROOT/ui' && DIRECTO_API_URL='$API_URL' NEXT_PUBLIC_DIRECTO_API_URL='$API_URL' PORT='$UI_PORT' nohup npm run dev -- --hostname '$UI_HOST' --port '$UI_PORT'"
+    "cd '$ROOT/ui' && DIRECTO_API_URL='$API_URL' NEXT_PUBLIC_DIRECTO_API_URL='$API_URL' PORT='$UI_PORT' setsid nohup npm run dev -- --hostname '$UI_HOST' --port '$UI_PORT'"
 
 # 7. browser
 log "Opening $UI_URL in your browser"

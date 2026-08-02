@@ -48,7 +48,13 @@ from directo.platform.plugins import (
     reset_plugins,
     unload_plugin,
 )
-from directo.platform.gui import main as gui_main, run as gui_run
+def gui_main(*args, **kwargs):
+    from directo.platform.gui import main
+    return main(*args, **kwargs)
+
+def gui_run(*args, **kwargs):
+    from directo.platform.gui import run
+    return run(*args, **kwargs)
 
 __all__ = [
     # migrations

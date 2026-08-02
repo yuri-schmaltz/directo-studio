@@ -36,8 +36,8 @@ export function StatusBar() {
       {/* Right side: System Status */}
       <div className="flex items-center gap-3 shrink-0 font-mono">
         {/* System Active Engine */}
-        <div className="hidden md:flex items-center gap-1 text-[10px] text-fg-subtle">
-          <ShieldCheck className="h-3 w-3 text-emerald-500" />
+        <div className="hidden md:flex items-center gap-1.5 text-[10px] text-fg-subtle">
+          <ShieldCheck className="h-3 w-3 text-emerald-400" />
           <span>Backend Ready</span>
         </div>
 

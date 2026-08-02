@@ -266,9 +266,9 @@ else
 fi
 
 # 2. backend deps (idempotent; pip no-ops when up to date)
-log "Installing backend dependencies (editable + fastapi/uvicorn/click/httpx/websockets/streamlit)"
+log "Installing backend dependencies (editable mode)"
 "$VENV_PY" -m pip install --upgrade pip --quiet
-"$VENV_PY" -m pip install -e . fastapi 'uvicorn[standard]' click httpx websockets streamlit --quiet
+"$VENV_PY" -m pip install -e . --quiet
 ok "backend deps installed"
 
 # 3. data dir

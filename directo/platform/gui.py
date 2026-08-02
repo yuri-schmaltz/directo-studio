@@ -38,15 +38,9 @@ import streamlit as st
 
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import configure_logging, get_logger
-from directo.platform import (
-    CacheLayer,
-    EventBus,
-    EventKind,
-    ImageCache,
-    MigrationManager,
-    PromptCache,
-    WebhookManager,
-)
+from directo.platform.cache import CacheLayer, ImageCache, PromptCache
+from directo.platform.events import EventBus, EventKind, WebhookManager
+from directo.platform.migrations import MigrationManager
 from directo.printing import StoryboardConfig, StoryboardExporter, StoryboardLayout
 from directo.queue import Job, JobState, PersistentQueue
 from directo.scale import PresetStore
@@ -256,7 +250,8 @@ def page_cinema(svcs: dict[str, Any]) -> None:
                 ctx = {"era": era} if era else {}
                 report = engine.evaluate(prompt, context=ctx)
                 st.write(f"**Verdict:** {'⛔ BLOCKED' if report.blocked else '✅ OK'}")
-                st.write(f"**Score:** {report.score:.2f}")
+                score = getattr(report, "score", 1.0)
+                st.write(f"**Score:** {score:.2f}")
                 if report.warnings:
                     st.warning("Warnings:")
                     for w in report.warnings:
@@ -284,7 +279,7 @@ def page_cinema(svcs: dict[str, Any]) -> None:
                 scenes = parse_script_text(text, hint=hint or "")
                 st.success(f"parsed {len(scenes)} scene(s)")
                 for s in scenes:
-                    with st.expander(f"Scene {s.number}: {s.heading}"):
+                    with st.expander(f"Scene {s.number}: {s.slugline}"):
                         st.json(s.to_dict())
 
 
@@ -348,7 +343,7 @@ def page_live_events(svcs: dict[str, Any]) -> None:
     st.rerun()
 
 
-def page_about() -> None:
+def page_about(svcs: dict[str, Any] | None = None) -> None:
     st.header("ℹ️ About")
     st.markdown("""
 **Directo v1.0** — production-ready creative AI platform.

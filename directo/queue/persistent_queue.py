@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from directo.observability import MetricsCollector, bind_context, get_logger
+from directo.platform.db import get_db_connection
 from directo.queue.job import Job, JobState
 
 log = get_logger("directo.queue")
@@ -54,16 +55,12 @@ class PersistentQueue:
         self._metrics = metrics or MetricsCollector()
         self._lock = threading.RLock()
 
-        self._conn = sqlite3.connect(
+        self._conn = get_db_connection(
             self._db_path,
             check_same_thread=False,
             isolation_level=None,  # autocommit; we use explicit BEGIN
             timeout=30.0,
         )
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
         self._migrate()
 
     # ----------------- Schema -----------------

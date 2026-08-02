@@ -8,6 +8,7 @@ based on installed packages and configured API keys.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from directo.observability import get_logger
@@ -127,7 +128,7 @@ class AnthropicBackend:
 
 
 class OllamaBackend:
-    """Ollama local server (no API key, just localhost:11434)."""
+    """Ollama local server with resilient fallback and retries."""
 
     name = "ollama"
 
@@ -136,37 +137,65 @@ class OllamaBackend:
         self._model = model or os.environ.get("OLLAMA_MODEL", "llama3.1")
         self._base_url = base_url or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
+    def list_installed_models(self) -> list[str]:
+        """Fetch list of models available in the local Ollama instance."""
+        import json
+        import urllib.request
+        try:
+            with urllib.request.urlopen(f"{self._base_url}/api/tags", timeout=3) as resp:
+                data = json.loads(resp.read())
+                models = [m.get("name", "") for m in data.get("models", [])]
+                return [m for m in models if m]
+        except Exception:
+            return []
+
     def is_available(self) -> bool:
         try:
             import urllib.request
-            urllib.request.urlopen(f"{self._base_url}/api/tags", timeout=1)
-            return True
+            with urllib.request.urlopen(f"{self._base_url}/api/tags", timeout=2) as resp:
+                return resp.status == 200
         except Exception:
             return False
 
-    def complete(self, prompt, *, system="", temperature=0.7, max_tokens=1024):
-        try:
-            import json
-            import urllib.request
-            body = json.dumps({
-                "model": self._model,
-                "prompt": prompt,
-                "system": system or "You are a helpful assistant.",
-                "stream": False,
-                "options": {"temperature": temperature, "num_predict": max_tokens},
-            }).encode()
-            req = urllib.request.Request(
-                f"{self._base_url}/api/generate",
-                data=body,
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                data = json.loads(resp.read())
-            return data.get("response", "").strip()
-        except Exception as exc:  # noqa: BLE001
-            log.warning(f"Ollama backend failed: {exc}; falling back to template")
-            return TemplateBackend().complete(prompt, system=system,
-                                             temperature=temperature, max_tokens=max_tokens)
+    def complete(self, prompt: str, *, system: str = "", temperature: float = 0.7, max_tokens: int = 1024) -> str:
+        import json
+        import time
+        import urllib.request
+
+        models_to_try = [self._model]
+        installed = self.list_installed_models()
+        # Add installed models as fallback if specified model differs
+        for inst in installed:
+            clean_inst = inst.split(":")[0]
+            if inst not in models_to_try and clean_inst not in [m.split(":")[0] for m in models_to_try]:
+                models_to_try.append(inst)
+
+        for target_model in models_to_try:
+            for attempt in range(2):
+                try:
+                    body = json.dumps({
+                        "model": target_model,
+                        "prompt": prompt,
+                        "system": system or "You are a helpful assistant.",
+                        "stream": False,
+                        "options": {"temperature": temperature, "num_predict": max_tokens},
+                    }).encode()
+                    req = urllib.request.Request(
+                        f"{self._base_url}/api/generate",
+                        data=body,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    with urllib.request.urlopen(req, timeout=120) as resp:
+                        data = json.loads(resp.read())
+                    res_text = data.get("response", "").strip()
+                    if res_text:
+                        return res_text
+                except Exception as exc:  # noqa: BLE001
+                    log.warning(f"Ollama attempt {attempt + 1} for model '{target_model}' failed: {exc}")
+                    time.sleep(0.5)
+
+        log.warning(f"All Ollama models failed ({models_to_try}); falling back to template backend")
+        return TemplateBackend().complete(prompt, system=system, temperature=temperature, max_tokens=max_tokens)
 
 
 def make_backend(prefer: str | None = None, **kwargs: Any) -> Any:
@@ -205,8 +234,8 @@ class DynamicLLMBackend:
     """An LLM backend that forwards calls to the current configured backend in settings.json."""
     name = "dynamic"
 
-    def __init__(self, settings_path: str = "./directo_data/settings.json") -> None:
-        self._settings_path = settings_path
+    def __init__(self, settings_path: str | Path = "./directo_data/settings.json") -> None:
+        self._settings_path = str(settings_path)
 
     def _get_backend(self) -> Any:
         import json

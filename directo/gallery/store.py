@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from directo.gallery.models import ColorTag, ImageRecord
 from directo.observability import MetricsCollector, get_logger
+from directo.platform.db import get_db_connection
 
 log = get_logger("directo.gallery")
 
@@ -38,11 +39,7 @@ class Gallery:
         self._metrics = metrics or MetricsCollector()
         self._lock = threading.RLock()
 
-        self._conn = sqlite3.connect(
-            self._db_path, check_same_thread=False, isolation_level=None
-        )
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn = get_db_connection(self._db_path, check_same_thread=False, isolation_level=None)
         self._migrate()
 
     def _migrate(self) -> None:
@@ -160,7 +157,7 @@ class Gallery:
 
     def rate(self, image_id: str, rating: int) -> None:
         """Set 1-5 star rating (0 to clear)."""
-        rating = max(0, min(5, int(rating)))
+        rating = max(0, min(5, rating))
         self.update(image_id, rating=rating)
 
     def favorite(self, image_id: str, value: bool = True) -> None:

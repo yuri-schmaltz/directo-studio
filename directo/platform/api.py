@@ -27,7 +27,7 @@ import json
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any, AsyncGenerator
 
 try:
     from fastapi import (  # type: ignore
@@ -50,7 +50,7 @@ from directo.gallery import Gallery, ImageRecord
 from directo.observability import MetricsCollector, configure_logging, get_logger
 from directo.platform.backup import BackupManager
 from directo.platform.cache import CacheLayer
-from directo.platform.events import EventBus, EventKind, WebhookManager
+from directo.platform.events import Event, EventBus, EventKind, WebhookManager
 from directo.printing import StoryboardConfig, StoryboardExporter, StoryboardLayout
 from directo.queue import PersistentQueue, Job
 from directo.scale import PresetStore
@@ -97,7 +97,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     style_bible_store = StyleBibleStore(db_dir / "style_bibles.db")
 
     @asynccontextmanager
-    async def lifespan(app: "FastAPI") -> AsyncIterator[None]:
+    async def lifespan(app: "FastAPI") -> AsyncGenerator[None, None]:
         log.info("Directo API starting")
         configure_logging(level="INFO", json_output=True)
         bus.publish(EventKind.PROJECT_CREATED, {"event": "api_started"})
@@ -224,6 +224,18 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
             "uptime": time.time(),
             "queue": queue.stats(),
             "gallery": gallery.count(),
+        }
+
+    @app.get("/health/ollama")
+    def health_ollama() -> dict[str, Any]:
+        from directo.director.backends import OllamaBackend
+        ollama = OllamaBackend()
+        is_up = ollama.is_available()
+        models = ollama.list_installed_models() if is_up else []
+        return {
+            "status": "ok" if is_up else "unavailable",
+            "available": is_up,
+            "models": models,
         }
 
     @app.get("/metrics")

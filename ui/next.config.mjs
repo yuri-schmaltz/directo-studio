@@ -16,6 +16,14 @@ const nextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/backend/:path*",
+        destination: `${backend}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

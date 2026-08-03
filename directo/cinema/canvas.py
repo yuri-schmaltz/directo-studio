@@ -91,6 +91,8 @@ class StoryboardCanvas:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "StoryboardCanvas":
         panels_data = data.pop("panels", {})
+        if isinstance(panels_data, list):
+            panels_data = {p["id"]: p for p in panels_data if isinstance(p, dict) and "id" in p}
         canvas = cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
         canvas.panels = {pid: Panel.from_dict(p) for pid, p in panels_data.items()}
         return canvas

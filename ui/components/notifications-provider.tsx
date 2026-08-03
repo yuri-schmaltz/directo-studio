@@ -152,7 +152,15 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       }}
     >
       {children}
-      <Toaster position="top-right" theme="dark" richColors closeButton />
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        richColors
+        closeButton
+        duration={3500}
+        visibleToasts={3}
+        offset="36px"
+      />
     </NotificationsContext.Provider>
   );
 }

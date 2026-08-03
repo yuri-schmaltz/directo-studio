@@ -23,10 +23,12 @@ import {
   DollarSign,
   Clock,
   Layers,
+  BookOpen,
 } from "lucide-react";
 import type { CinemaReport, Scene } from "@/lib/types";
+import StyleBibleView from "@/components/style-bible-view";
 
-type Tab = "openmontage" | "reference_video" | "parse" | "evaluate";
+type Tab = "openmontage" | "style_bible" | "reference_video" | "parse" | "evaluate";
 
 export default function CinemaPage() {
   const [tab, setTab] = useState<Tab>("openmontage");
@@ -40,7 +42,7 @@ export default function CinemaPage() {
             Cinema & Video Production Suite
           </h2>
           <p className="text-sm text-fg-muted">
-            Pipelines de produção de vídeo generativo (OpenMontage Engine), deconstrução de referências e avaliação de câmeras
+            Generative video production pipelines (OpenMontage Engine), Visual Style Bible, reference deconstruction and camera evaluation
           </p>
         </div>
         <div className="flex items-center gap-2 font-mono text-xs bg-bg-muted/80 px-3 py-1.5 rounded border border-border">
@@ -60,11 +62,19 @@ export default function CinemaPage() {
         </Button>
 
         <Button
+          variant={tab === "style_bible" ? "primary" : "secondary"}
+          onClick={() => setTab("style_bible")}
+        >
+          <BookOpen className="h-4 w-4 mr-1.5 inline-block text-amber-400" />
+          Style Bible
+        </Button>
+
+        <Button
           variant={tab === "reference_video" ? "primary" : "secondary"}
           onClick={() => setTab("reference_video")}
         >
           <Video className="h-4 w-4 mr-1.5 inline-block text-cyan-400" />
-          Decompositor de Referência
+          Reference Decomposer
         </Button>
 
         <Button
@@ -72,7 +82,7 @@ export default function CinemaPage() {
           onClick={() => setTab("parse")}
         >
           <FileText className="h-4 w-4 mr-1.5 inline-block" />
-          Processador de Roteiro
+          Script Processor
         </Button>
 
         <Button
@@ -80,11 +90,12 @@ export default function CinemaPage() {
           onClick={() => setTab("evaluate")}
         >
           <Clapperboard className="h-4 w-4 mr-1.5 inline-block" />
-          Avaliador de Prompts
+          Prompt Evaluator
         </Button>
       </div>
 
       {tab === "openmontage" && <OpenMontageTab />}
+      {tab === "style_bible" && <StyleBibleView />}
       {tab === "reference_video" && <ReferenceVideoTab />}
       {tab === "parse" && <ParseTab />}
       {tab === "evaluate" && <EvaluateTab />}
@@ -135,7 +146,7 @@ function OpenMontageTab() {
       {/* Pipeline Selection Cards */}
       <div className="space-y-2">
         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-fg-subtle">
-          1. Selecionar Pipeline de Produção (Preset)
+          1. Select Production Pipeline (Preset)
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {pipelines.map((p) => {

@@ -3,6 +3,7 @@
 import { useNotifications } from "@/components/notifications-provider";
 import { LiveIndicator } from "@/components/live-indicator";
 import { Terminal, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 export function StatusBar() {
   const { state } = useNotifications();
@@ -45,6 +46,17 @@ export function StatusBar() {
 
         {/* Live Status Indicator */}
         <LiveIndicator state={state} className="text-[11px]" />
+
+        <span className="h-3 w-px bg-border" />
+
+        {/* Version Badge */}
+        <Link
+          href="/about"
+          title="Sobre o Directo Studio"
+          className="text-[10px] font-mono text-accent/80 bg-accent/10 px-1.5 py-0.5 rounded border border-accent/20 hover:bg-accent/20 hover:text-accent transition-colors"
+        >
+          v1.1.5
+        </Link>
       </div>
     </footer>
   );

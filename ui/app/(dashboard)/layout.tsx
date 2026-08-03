@@ -13,33 +13,23 @@ import { cn } from "@/lib/utils";
 
 const MOBILE_NAV_GROUPS = [
   {
-    title: "Projeto & Conceito",
+    title: "Project & Concept",
     items: [
-      { href: "/projects", label: "Projetos" },
-      { href: "/style-bible", label: "Bíblia de Estilo" },
-      { href: "/presets", label: "Presets" },
+      { href: "/projects", label: "Projects" },
     ],
   },
   {
-    title: "Produção & Geração",
+    title: "Production & Generation",
     items: [
       { href: "/cinema", label: "Cinema Engine" },
-      { href: "/animatics", label: "Animáticas" },
+      { href: "/animatics", label: "Animatics" },
       { href: "/media-hub", label: "Media Hub" },
     ],
   },
   {
-    title: "Assets & Execução",
+    title: "Assets & Execution",
     items: [
-      { href: "/gallery", label: "Galeria" },
-      { href: "/jobs", label: "Fila de Render" },
-    ],
-  },
-  {
-    title: "Sistema",
-    items: [
-      { href: "/settings", label: "Configurações" },
-      { href: "/about", label: "Sobre" },
+      { href: "/jobs", label: "Render Queue" },
     ],
   },
 ];
@@ -84,7 +74,7 @@ export default function DashboardLayout({
         <Sidebar />
         <div className="md:pl-60 flex flex-col flex-1 min-h-[calc(100vh-28px)]">
           <Header onMenuClick={() => setMobileOpen(true)} />
-          <main className="flex-1 p-3 md:p-4 max-w-7xl w-full mx-auto animate-fade-in pb-12">
+          <main className="flex-1 p-3.5 md:p-4.5 w-full max-w-[1840px] mx-auto animate-fade-in pb-8">
             {children}
           </main>
         </div>

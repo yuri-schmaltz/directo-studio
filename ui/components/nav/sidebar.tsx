@@ -35,33 +35,23 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    title: "Projeto & Conceito",
+    title: "Project & Concept",
     items: [
-      { href: "/projects", label: "Projetos", icon: FolderKanban, shortcut: "Alt+1" },
-      { href: "/style-bible", label: "Bíblia de Estilo", icon: BookOpen, shortcut: "Alt+8" },
-      { href: "/presets", label: "Presets", icon: Palette, shortcut: "Alt+4" },
+      { href: "/projects", label: "Projects", icon: FolderKanban, shortcut: "Alt+1" },
     ],
   },
   {
-    title: "Produção & Geração",
+    title: "Production & Generation",
     items: [
       { href: "/cinema", label: "Cinema Engine", icon: Clapperboard, shortcut: "Alt+5" },
-      { href: "/animatics", label: "Animáticas", icon: Film, shortcut: "Alt+7" },
+      { href: "/animatics", label: "Animatics", icon: Film, shortcut: "Alt+7" },
       { href: "/media-hub", label: "Media Hub", icon: Zap, shortcut: "Alt+9" },
     ],
   },
   {
-    title: "Assets & Execução",
+    title: "Assets & Execution",
     items: [
-      { href: "/gallery", label: "Galeria", icon: Image, shortcut: "Alt+2" },
-      { href: "/jobs", label: "Fila de Render", icon: Workflow, shortcut: "Alt+3" },
-    ],
-  },
-  {
-    title: "Sistema",
-    items: [
-      { href: "/settings", label: "Configurações", icon: Settings },
-      { href: "/about", label: "Sobre", icon: Info },
+      { href: "/jobs", label: "Render Queue", icon: Workflow, shortcut: "Alt+3" },
     ],
   },
 ];
@@ -72,12 +62,9 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col md:w-60 md:fixed md:top-0 md:bottom-7 z-40 border-r border-border bg-bg-subtle select-none">
       {/* Header Brand */}
-      <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border shrink-0">
+      <div className="flex items-center justify-center gap-2.5 px-4 h-12 border-b border-border shrink-0">
         <Target className="h-5 w-5 text-accent" />
         <span className="font-semibold text-fg tracking-tight text-base">Directo Studio</span>
-        <span className="text-[10px] font-mono text-accent/80 ml-auto bg-accent/10 px-1.5 py-0.5 rounded border border-accent/20">
-          v1.1.5
-        </span>
       </div>
 
       {/* Nav Groups */}

@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Bell, Check, Trash2, ExternalLink, Radio, Circle } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bell, Settings, Check, Trash2, ExternalLink, Radio, Circle } from "lucide-react";
 import { useNotifications } from "@/components/notifications-provider";
 import { LiveIndicator } from "@/components/live-indicator";
 import { cn } from "@/lib/utils";
 
 export function ConnectionWidget() {
+  const pathname = usePathname();
   const { state, notifications, unreadCount, markAllRead, clearNotifications } =
     useNotifications();
   const [open, setOpen] = useState(false);
@@ -39,7 +41,7 @@ export function ConnectionWidget() {
   };
 
   return (
-    <div className="relative flex items-center gap-2" ref={popoverRef}>
+    <div className="relative flex items-center gap-1.5" ref={popoverRef}>
       {/* Bell Button */}
       <button
         onClick={handleToggle}
@@ -57,6 +59,19 @@ export function ConnectionWidget() {
           </span>
         )}
       </button>
+
+      {/* Settings Link Button (Icon only) */}
+      <Link
+        href="/settings"
+        className={cn(
+          "p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-bg-muted transition-colors",
+          pathname === "/settings" && "bg-bg-muted text-amber-400 font-bold"
+        )}
+        title="Configurações"
+        aria-label="Configurações"
+      >
+        <Settings className="h-4 w-4" />
+      </Link>
 
       {/* Dropdown Popover */}
       {open && (

@@ -1,22 +1,7 @@
 """Script parser — turn a screenplay into a list of scenes.
 
-Supports two formats out of the box:
-
-- **Fountain** — the industry-standard plain-text screenwriting format.
-  Scene headings (``INT. KITCHEN - DAY``), action, dialogue, transitions.
-- **Plain text** — paragraph-based fallback. Each paragraph becomes a
-  "scene candidate" (the engine decides).
-
-PDF and DOCX are best-effort: we extract the text and treat it as
-plain text. The mammoth / pdfplumber / pypdf deps are optional.
-
-Output: a list of :class:`Scene` objects. Each scene has a
-``slugline`` (e.g. ``INT. KITCHEN - DAY``), ``action`` (description
-text), ``characters`` (who's in the scene), and ``dialogue``
-(list of character + line pairs).
-
-The :func:`scenes_to_prompts` helper turns each scene into a
-cinema-prompt-ready description suitable for image generation.
+Supports Fountain, Markdown, Portuguese/English sluglines, plain text, and PDF/DOCX.
+Includes OCR fallback for scanned PDFs and multi-core parallel batch processing.
 """
 
 from __future__ import annotations
@@ -24,6 +9,7 @@ from __future__ import annotations
 import re
 import time
 import uuid
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -51,10 +37,10 @@ class Scene:
 
     id: str
     number: int
-    slugline: str                       # "INT. KITCHEN - DAY"
+    slugline: str                       # "INT. KITCHEN - DAY" or "CENA 1 - INT"
     location: str = ""                  # "INT. KITCHEN"
     time_of_day: str = ""               # "DAY" | "NIGHT" | "DUSK" | etc.
-    interior: bool | None = None        # True for INT, False for EXT, None if unknown
+    interior: bool | None = None        # True for INT/INTERIOR, False for EXT/EXTERIOR, None if unknown
     action: str = ""                    # action / description
     dialogue: list[DialogueLine] = field(default_factory=list)
     characters: list[str] = field(default_factory=list)
@@ -68,14 +54,11 @@ class Scene:
         if self.slugline:
             parts.append(self.slugline)
         if self.action:
-            # Trim to the most evocative 200 chars
             text = self.action.strip()
             if len(text) > 400:
                 text = text[:400].rsplit(".", 1)[0] + "."
             parts.append(text)
-        if self.characters:
-            parts.append(f"featuring {', '.join(self.characters[:4])}")
-        return " — ".join(parts) if parts else ""
+        return " — ".join(parts)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -93,155 +76,142 @@ class Scene:
 
 
 # =====================================================================
-# Fountain / Markdown parser
+# Fountain / Markdown / Multi-language parser
 # =====================================================================
 
-
-# A scene heading starts with INT./EXT./EST./I/E. (case-insensitive) or Markdown # INT.
-# e.g. "INT. KITCHEN - DAY" or "# INT. KITCHEN - DAY"
+# Extended Scene Heading regex: INT, EXT, EST, INT/EXT, INTERIOR, EXTERIOR, CENA \d+
 _SCENE_RE = re.compile(
-    r"^(?:#+\s*)?(?:INT|EXT|EST|INT\.\/EXT|I\/E)[\s\.\/]+(.+?)(?:\s*[-–—]\s*(.+))?$",
+    r"^(?:#+\s*)?(?:INT|EXT|EST|INT\.\/EXT|INT\/EXT|I\/E|INTERIOR|EXTERIOR|CENA\s+\d+|CENA|ESTÚDIO|ESTUDIO)[\s\.\/\-\:]+(.+?)(?:\s*[-–—:]\s*(.+))?$",
     re.IGNORECASE,
 )
 _TRANSITION_RE = re.compile(
-    r"^[A-Z\s]+TO:\s*$|^(?:FADE IN|CUT TO|DISSOLVE TO|SMASH CUT TO|MATCH CUT TO):?$",
+    r"^[A-Z\s]+TO:\s*$|^(?:FADE IN|CUT TO|DISSOLVE TO|SMASH CUT TO|MATCH CUT TO|CORTE PARA|CORTE):?$",
     re.IGNORECASE,
 )
-# Character cue: line in ALL CAPS, possibly with (V.O.) / (O.S.) extension
+# Character cue: line in ALL CAPS, with (V.O.) / (O.S.) extension
 _CHARACTER_RE = re.compile(r"^([A-Z][A-Z0-9 .\-'À-ſ]+)(\s*\([^)]+\))?\s*$")
 _PARENTHETICAL_RE = re.compile(r"^\(.+\)\s*$")
 
+# Noise filter for character cue deduplication
+NOISE_CHARACTERS = {
+    "SIM", "NÃO", "NAO", "CONTINUA", "CORREDOR", "SALA", "FIM", "CORTE", "FADE",
+    "FADE IN", "FADE OUT", "CUT TO", "DISSOLVE TO", "DIÁLOGO", "DIALOGO", "VERSO",
+    "NOTA", "OBS", "VOZ", "TODOS", "AMBOS", "GERAL", "VISÃO", "VISAO", "CENA",
+    "PÁGINA", "PAGINA", "CHAPTER", "CAPÍTULO", "CAPITULO", "VOL", "PARTE", "EXT", "INT"
+}
 
-def _classify_block(block: list[str]) -> tuple[str, str, str, list[DialogueLine]]:
-    """Classify a block as (kind, value) where kind is one of:
-    'action', 'character', 'dialogue', 'parenthetical', 'transition'.
-    """
-    if not block:
-        return ("action", "", "", [])
-    first = block[0].strip()
-    # Transition
-    if _TRANSITION_RE.match(first) and len(block) == 1:
-        return ("transition", first, "", [])
-    # Character
-    if len(block) == 1 and _CHARACTER_RE.match(first) and first == first.upper():
-        return ("character", first, "", [])
-    # Parenthetical on its own
-    if _PARENTHETICAL_RE.match(first) and len(block) == 1:
-        return ("parenthetical", first, "", [])
-    # Otherwise: action
-    return ("action", "\n".join(block), "", [])
+
+def _clean_character_name(name: str) -> str | None:
+    """Sanitize character name and return None if it is a noise word."""
+    if not name:
+        return None
+    clean = re.sub(r"\s*\([^)]*\)", "", name).strip().upper()
+    clean = re.sub(r"^[0-9\.\-\s]+", "", clean)
+    if not clean or len(clean) < 2:
+        return None
+    if clean in NOISE_CHARACTERS:
+        return None
+    if not re.search(r"[A-ZÀ-ÿ]", clean):
+        return None
+    return clean
 
 
 def parse_fountain(text: str) -> list[Scene]:
-    """Parse a Fountain screenplay into a list of scenes."""
+    """Parse a Fountain / Markdown screenplay into a list of scenes."""
     lines = text.splitlines()
     scenes: list[Scene] = []
     current_action: list[str] = []
     current_dialogue: list[DialogueLine] = []
-    current_char: str | None = None
-    current_parenthetical: str | None = None
-    current_transitions: list[str] = []
-    current_characters: list[str] = []
-    scene_start_line = 0
-    scene_number = 0
+    current_chars: set[str] = set()
+    current_slug: str = ""
+    scene_start_line: int = 0
+    header_buffer: list[str] = []
 
     def flush_scene(end_line: int) -> None:
-        nonlocal current_action, current_dialogue, current_char, current_parenthetical
-        nonlocal current_transitions, current_characters, scene_start_line
-        if not (current_action or current_dialogue):
+        nonlocal current_action, current_dialogue, current_chars, current_slug, scene_start_line, header_buffer
+        if not current_slug and not current_action and not current_dialogue:
             return
-        scene_number_local = len(scenes) + 1
-        raw_slug = (current_action[0] if current_action else "").strip() or "UNTITLED SCENE"
-        slugline = raw_slug.lstrip("#").strip()
-        # Parse slugline for location and time
-        loc, tod, interior = _parse_slugline(slugline)
-        scene_id = uuid.uuid4().hex[:12]
+        
+        # If no slugline exists and no scenes have been parsed yet, buffer initial title metadata
+        if not current_slug and not scenes:
+            header_buffer.extend(current_action)
+            current_action = []
+            return
+
+        clean_slug = current_slug.lstrip("#").strip() if current_slug else ""
+        loc, tod, interior = _parse_slugline(clean_slug) if clean_slug else ("", "", None)
+
+        action_lines = list(header_buffer) + current_action
+        header_buffer = []
+        action_text = "\n".join(action_lines).strip()
+
+        filtered_chars = sorted(list({_clean_character_name(c) for c in current_chars if _clean_character_name(c)}))
+
         scenes.append(Scene(
-            id=scene_id,
-            number=scene_number_local,
-            slugline=slugline,
+            id=uuid.uuid4().hex[:12],
+            number=len(scenes) + 1,
+            slugline=clean_slug or f"SCENE {len(scenes) + 1}",
             location=loc,
             time_of_day=tod,
             interior=interior,
-            action="\n".join(current_action[1:] if current_action else []).strip(),
-            dialogue=current_dialogue,
-            characters=sorted(set(current_characters)),
-            transitions=current_transitions,
-            raw="\n".join(current_action + [
-                f"{d.character}: {d.text}" for d in current_dialogue
-            ]),
+            action=action_text,
+            dialogue=list(current_dialogue),
+            characters=filtered_chars,
+            transitions=[],
+            raw=action_text,
             line_range=(scene_start_line, end_line),
         ))
         current_action = []
         current_dialogue = []
-        current_char = None
-        current_parenthetical = None
-        current_transitions = []
-        current_characters = []
-        scene_start_line = 0
+        current_chars = set()
+        current_slug = ""
+        scene_start_line = end_line + 1
 
-    # Skip Fountain title page: lines at the top of the file that are
-    # "Key: value" pairs (Title:, Author:, Draft date:, etc).
-    title_page_done = False
     i = 0
+    pending_char: str | None = None
+    pending_paren: str | None = None
+
     while i < len(lines):
-        line = lines[i].rstrip()
+        line = lines[i]
         stripped = line.strip()
-        # Title page: "Key: value" or blank at top
-        if not title_page_done:
-            if not stripped:
-                i += 1
-                continue
-            if (":" in stripped and not _SCENE_RE.match(stripped)
-                    and i < 20):  # title page is at the top
-                # Likely title page metadata; skip
-                i += 1
-                continue
-            title_page_done = True
+        if not stripped:
+            i += 1
+            continue
+
         if _SCENE_RE.match(stripped):
-            # Flush previous
-            if current_action or current_dialogue:
-                flush_scene(i - 1)
-            current_action = [stripped]
-            scene_start_line = i
-        elif _TRANSITION_RE.match(stripped):
-            if stripped == stripped.upper() or stripped.endswith(":"):
-                current_transitions.append(stripped)
-        elif stripped and stripped == stripped.upper() and _CHARACTER_RE.match(stripped):
-            # Character cue
-            char_match = _CHARACTER_RE.match(stripped)
-            current_char = (char_match.group(1) if char_match else stripped).strip()
-            current_parenthetical = None
-            current_characters.append(current_char)
-            # Next non-blank line is dialogue
-            j = i + 1
-            while j < len(lines) and not lines[j].strip():
-                j += 1
-            if j < len(lines):
-                next_line = lines[j].strip()
-                if _PARENTHETICAL_RE.match(next_line):
-                    current_parenthetical = next_line
-                    j += 1
-                    if j < len(lines):
-                        next_line = lines[j].strip()
-                # Collect dialogue lines until blank
-                dialogue_lines = [next_line]
-                k = j + 1
-                while k < len(lines) and lines[k].strip() and not _CHARACTER_RE.match(lines[k].strip()):
-                    dialogue_lines.append(lines[k].strip())
-                    k += 1
-                current_dialogue.append(DialogueLine(
-                    character=current_char,
-                    text="\n".join(dialogue_lines),
-                    parenthetical=current_parenthetical,
-                ))
-                i = k - 1
-        elif stripped:
-            current_action.append(stripped)
+            flush_scene(i - 1)
+            current_slug = stripped
+            i += 1
+            continue
+
+        m_char = _CHARACTER_RE.match(stripped)
+        if m_char and stripped == stripped.upper() and i + 1 < len(lines) and lines[i + 1].strip():
+            char_name = m_char.group(1).strip()
+            cleaned_char = _clean_character_name(char_name)
+            if cleaned_char:
+                pending_char = char_name
+                current_chars.add(cleaned_char)
+                i += 1
+                if i < len(lines) and _PARENTHETICAL_RE.match(lines[i].strip()):
+                    pending_paren = lines[i].strip().strip("()")
+                    i += 1
+                if i < len(lines) and lines[i].strip():
+                    current_dialogue.append(DialogueLine(
+                        character=pending_char,
+                        text=lines[i].strip(),
+                        parenthetical=pending_paren,
+                    ))
+                    pending_char = None
+                    pending_paren = None
+                i += 1
+                continue
+
+        current_action.append(stripped)
         i += 1
-    # Flush
-    if current_action or current_dialogue:
+
+    if current_slug or current_action or current_dialogue:
         flush_scene(len(lines) - 1)
+
     log.info(f"parsed Fountain: {len(scenes)} scenes")
     return scenes
 
@@ -249,12 +219,20 @@ def parse_fountain(text: str) -> list[Scene]:
 def _parse_slugline(slug: str) -> tuple[str, str, bool | None]:
     """Extract location, time-of-day, interior/exterior from a slugline."""
     clean = slug.lstrip("#").strip()
-    m = _SCENE_RE.match(clean)
+    clean_prefix = re.sub(r"^CENA\s+\d+[\s\.\/\-\:]*", "", clean, flags=re.IGNORECASE).strip() or clean
+    m = _SCENE_RE.match(clean_prefix)
     if not m:
-        return clean, "", None
-    location = m.group(1).strip() if m.group(1) else clean
+        m = _SCENE_RE.match(clean)
+    if not m:
+        return clean_prefix, "", None
+    location = m.group(1).strip() if m.group(1) else clean_prefix
     tod = (m.group(2) or "").strip() if m.lastindex and m.lastindex >= 2 else ""
-    interior = True if clean.upper().startswith("INT") else (False if clean.upper().startswith("EXT") else None)
+    upper_clean = clean.upper()
+    interior: bool | None = None
+    if "INTERIOR" in upper_clean or "INT." in upper_clean or "INT/" in upper_clean or upper_clean.startswith("INT"):
+        interior = True
+    elif "EXTERIOR" in upper_clean or "EXT." in upper_clean or "EXT/" in upper_clean or upper_clean.startswith("EXT"):
+        interior = False
     return location, tod, interior
 
 
@@ -264,11 +242,7 @@ def _parse_slugline(slug: str) -> tuple[str, str, bool | None]:
 
 
 def parse_plain_text(text: str, *, paragraphs_per_scene: int = 1) -> list[Scene]:
-    """Parse plain text into scenes by paragraph.
-
-    Without scene headings, we treat every ``paragraphs_per_scene``
-    paragraphs as a scene. Useful for prose / treatment / synopsis.
-    """
+    """Parse plain text into scenes by paragraph."""
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     if not paragraphs:
         return []
@@ -291,7 +265,7 @@ def parse_plain_text(text: str, *, paragraphs_per_scene: int = 1) -> list[Scene]
 
 
 # =====================================================================
-# Top-level facade
+# Top-level facade & Multi-core Batch Processing
 # =====================================================================
 
 
@@ -300,7 +274,7 @@ def parse_script(path: str | Path) -> list[Scene]:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"script not found: {path}")
-    text = path.read_text(encoding="utf-8", errors="ignore")
+    text = load_text_from_file(path)
     return parse_script_text(text, hint=path.suffix.lower())
 
 
@@ -308,10 +282,46 @@ def parse_script_text(text: str, hint: str = "") -> list[Scene]:
     """Parse script text. ``hint`` is the file extension hint (.fountain, .md, .txt, etc)."""
     if hint in (".fountain", ".spmd", ".md", ".markdown"):
         return parse_fountain(text)
-    # Try Fountain / Markdown scene regex first (it's plain text anyway, so safe to attempt)
     if any(_SCENE_RE.match(l.strip()) for l in text.splitlines() if l.strip()):
         return parse_fountain(text)
     return parse_plain_text(text)
+
+
+def _parse_single_file_worker(path_str: str) -> dict[str, Any]:
+    """Worker function for ProcessPoolExecutor batch script parsing."""
+    path = Path(path_str)
+    start_t = time.time()
+    try:
+        text = load_text_from_file(path)
+        scenes = parse_script_text(text, hint=path.suffix.lower())
+        return {
+            "path": str(path),
+            "status": "SUCCESS" if text.strip() else "EMPTY_TEXT",
+            "char_count": len(text),
+            "scene_count": len(scenes),
+            "duration_s": round(time.time() - start_t, 3),
+        }
+    except Exception as exc:
+        return {
+            "path": str(path),
+            "status": f"ERROR: {exc}",
+            "char_count": 0,
+            "scene_count": 0,
+            "duration_s": round(time.time() - start_t, 3),
+        }
+
+
+def parse_scripts_batch(paths: Iterable[str | Path], max_workers: int | None = None) -> list[dict[str, Any]]:
+    """Parse multiple script files in parallel using ProcessPoolExecutor."""
+    path_strs = [str(p) for p in paths]
+    if not path_strs:
+        return []
+    results: list[dict[str, Any]] = []
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_parse_single_file_worker, p): p for p in path_strs}
+        for future in as_completed(futures):
+            results.append(future.result())
+    return results
 
 
 def scenes_to_prompts(scenes: Iterable[Scene]) -> list[dict[str, Any]]:
@@ -331,12 +341,12 @@ def scenes_to_prompts(scenes: Iterable[Scene]) -> list[dict[str, Any]]:
 
 
 # =====================================================================
-# PDF / DOCX best-effort loaders
+# PDF / DOCX best-effort loaders with OCR Fallback
 # =====================================================================
 
 
 def load_text_from_file(path: str | Path) -> str:
-    """Load text from a file. Tries PDF, DOCX, then plain text."""
+    """Load text from a file. Tries PDF (with OCR fallback), DOCX, then plain text."""
     path = Path(path)
     suffix = path.suffix.lower()
     if suffix in (".txt", ".fountain", ".spmd", ".md"):
@@ -345,26 +355,43 @@ def load_text_from_file(path: str | Path) -> str:
         return _load_pdf(path)
     if suffix in (".docx", ".doc"):
         return _load_docx(path)
-    # default
     return path.read_text(encoding="utf-8", errors="ignore")
 
 
 def _load_pdf(path: Path) -> str:
+    """Extract text from PDF using pypdf -> pdfplumber -> pytesseract OCR fallback."""
+    text = ""
     try:
-        # Try pypdf first (pure Python)
         from pypdf import PdfReader  # type: ignore
         reader = PdfReader(str(path))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
-    except ImportError:
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception:
         pass
+
+    if text.strip():
+        return text
+
     try:
         import pdfplumber  # type: ignore
         with pdfplumber.open(str(path)) as pdf:
-            return "\n".join(page.extract_text() or "" for page in pdf.pages)
-    except ImportError:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+    except Exception:
         pass
-    log.warning("no PDF library installed; install pypdf or pdfplumber for PDF support")
-    return ""
+
+    if text.strip():
+        return text
+
+    # OCR Fallback (for scanned / image-based PDFs)
+    try:
+        import pytesseract  # type: ignore
+        from pdf2image import convert_from_path  # type: ignore
+        images = convert_from_path(str(path), first_page=1, last_page=5)
+        ocr_pages = [pytesseract.image_to_string(img, lang="por+eng") for img in images]
+        text = "\n".join(ocr_pages)
+    except Exception as exc:
+        log.debug(f"OCR fallback unavailable for {path}: {exc}")
+
+    return text
 
 
 def _load_docx(path: Path) -> str:
@@ -375,12 +402,10 @@ def _load_docx(path: Path) -> str:
             return result.value
     except ImportError:
         pass
-    # python-docx fallback
     try:
         from docx import Document  # type: ignore
         doc = Document(str(path))
         return "\n".join(p.text for p in doc.paragraphs)
     except ImportError:
         pass
-    log.warning("install mammoth or python-docx for DOCX support")
     return ""

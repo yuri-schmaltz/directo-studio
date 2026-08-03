@@ -341,3 +341,44 @@ BOB runs through the dark alley.
     assert scenes[1].time_of_day.upper() == "NIGHT"
     assert scenes[0].slugline == "INT. KITCHEN - DAY"
 
+
+def test_portuguese_slugline_parsing():
+    pt_script = """CENA 1 - INTERIOR: COZINHA DA CASA - DIA
+
+ALICE prepara café na mesa.
+
+EXTERIOR - PRAÇA CENTRAL - NOITE
+
+BOB caminha em direção ao farol.
+"""
+    scenes = parse_script_text(pt_script, hint=".fountain")
+    assert len(scenes) == 2
+    assert scenes[0].interior is True
+    assert scenes[0].location.upper() == "COZINHA DA CASA"
+    assert scenes[1].interior is False
+    assert scenes[1].location.upper() == "PRAÇA CENTRAL"
+
+
+def test_character_noise_filtering():
+    from directo.cinema.parser import _clean_character_name
+    assert _clean_character_name("ALICE (V.O.)") == "ALICE"
+    assert _clean_character_name("SIM") is None
+    assert _clean_character_name("CONTINUA") is None
+    assert _clean_character_name("FIM") is None
+    assert _clean_character_name("123") is None
+    assert _clean_character_name("BOB") == "BOB"
+
+
+def test_parse_scripts_batch(tmp_path):
+    from directo.cinema.parser import parse_scripts_batch
+    f1 = tmp_path / "s1.fountain"
+    f1.write_text("INT. HOUSE - DAY\n\nALICE speaks.\n")
+    f2 = tmp_path / "s2.fountain"
+    f2.write_text("EXT. GARDEN - NIGHT\n\nBOB walks.\n")
+
+    results = parse_scripts_batch([f1, f2], max_workers=2)
+    assert len(results) == 2
+    assert all(r["status"] == "SUCCESS" for r in results)
+    assert sum(r["scene_count"] for r in results) == 2
+
+

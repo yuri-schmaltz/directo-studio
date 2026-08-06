@@ -5,6 +5,51 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-08-06
+
+### Fixed
+
+- **`./start.sh` no longer lands on a stale build of either service.**
+  The CI refactor in commit `73fb312` (2026-08-02) collapsed the previous
+  3-job `ci.yml` (python-tests + ui-build + local-smoke-test) into a
+  single `test-and-lint` job that runs `ruff check .` and `mypy directo`
+  against a codebase that has 691 ruff violations and 56 mypy errors.
+  Every push since 2026-08-02 has been failing CI silently. This
+  release restores the proven 3-job structure (the same shape that
+  was green on `v1.1.4` and `v1.1.5`) and drops ruff/mypy from CI
+  gating. Lint can come back as a separate advisory job once the
+  codebase is cleaned up.
+- **Missing `Iterable` import in `directo/director/animatic.py`.** The
+  `from_gallery` annotation referenced `Iterable[Any]` but only
+  `Any, Protocol` were imported from `typing`. Masked by
+  `from __future__ import annotations` (annotations are stored as
+  lazy strings), so `typing.get_type_hints(from_gallery)` raised
+  `NameError: name 'Iterable' is not defined`. The function itself
+  worked; only external type introspection broke.
+
+### Changed
+
+- **Docs synced to reality.** README and Makefile help text were
+  frozen at v1.0.0 numbers (213 tests, 12 pages, 29 modules, 97
+  exports, 14.889 LOC). Actual state is 297 tests, 15 pages, 53 leaf
+  modules, 94 `__all__` exports, 14 CLI commands, 14.258 LOC of core
+  Python. The README's "Dashboard" section was removed in commit
+  `3f848d6` (2026-08-02) but still advertised; this release replaces
+  it with the new pages (Animatics, Style Bible, Media Hub, Settings,
+  About) and a corrected phase table that includes the M1–M3
+  milestones (Style Bible, Local Media Hub, FastAPI + UI integration)
+  that landed after v1.1.5.
+
+### Chore
+
+- **Repository cleanup.** `git rm --cached` on 70 files that were
+  tracked by accident: 5 log/console-capture files (`.start.log`,
+  `.backend.log`, `.frontend.log`, `.setsid.log`, `.coverage`) and
+  the entire `.agents/` tree (65 files of Mavis team-session
+  scratchpads from a previous orchestration run). Files preserved on
+  disk. `.gitignore` now covers all of them plus `node_modules/`,
+  `.next/`, `out/`, `htmlcov/`, and `.coverage`.
+
 ## [1.1.5] - 2026-07-25
 
 ### Added

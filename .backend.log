@@ -1,8 +1,0 @@
-INFO:     Started server process [12132]
-INFO:     Waiting for application startup.
-{"ts": "2026-08-02T15:17:47.973190-03:00", "level": "INFO", "logger": "directo.queue.worker", "message": "handler registered for kind='image.generate'", "module": "worker", "function": "register", "line": 64, "logger_name": "directo.worker"}
-{"ts": "2026-08-02T15:17:47.973484-03:00", "level": "INFO", "logger": "directo.queue.worker", "message": "handler registered for kind='animatic.generate'", "module": "worker", "function": "register", "line": 64, "logger_name": "directo.worker"}
-{"ts": "2026-08-02T15:17:47.973698-03:00", "level": "INFO", "logger": "directo.queue.worker", "message": "worker api-bg-worker starting (node=any)", "module": "worker", "function": "run", "line": 74, "logger_name": "directo.worker"}
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:51800 - "GET /health HTTP/1.1" 200 OK

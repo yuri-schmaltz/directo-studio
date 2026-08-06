@@ -27,7 +27,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Iterable, Protocol
 
 from directo.observability import get_logger
 

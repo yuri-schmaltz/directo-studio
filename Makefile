@@ -125,7 +125,7 @@ health: ## Curl /health on the API
 # ----- tests ----------------------------------------------------------------
 
 .PHONY: test
-test: ## Run the Python test suite (213 tests) inside the local venv
+test: ## Run the Python test suite (297 tests) inside the local venv
 	@if [ ! -x .venv/bin/python ]; then echo "no .venv — run \`make start\` first"; exit 1; fi
 	.venv/bin/pytest -q
 

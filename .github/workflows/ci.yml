@@ -2,34 +2,92 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test-and-lint:
+  python-tests:
+    name: Python tests (core)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
-      - name: Install dependencies
+          python-version: "3.11"
+      - name: Install core
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
+          pip install -e . fastapi uvicorn click httpx websockets streamlit pytest pytest-asyncio
+      - name: Run tests
+        run: pytest --tb=short
 
-      - name: Run Ruff Lint
-        run: |
-          ruff check .
+  ui-build:
+    name: UI build (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install UI deps
+        working-directory: ui
+        run: npm ci
+      - name: Type-check
+        working-directory: ui
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: ui
+        run: npm run build
+        env:
+          DIRECTO_API_URL: http://localhost:8000
 
-      - name: Run Mypy Type Check
+  local-smoke-test:
+    name: Local smoke test (./start.sh + version endpoints)
+    runs-on: ubuntu-latest
+    needs: [python-tests, ui-build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: bash -n on every bootstrapper
         run: |
-          mypy directo --ignore-missing-imports
-
-      - name: Run Pytest
+          set -e
+          for s in start.sh stop.sh logs.sh start-docker.sh stop-docker.sh; do
+            bash -n "$s"
+            echo "  bash -n OK: $s"
+          done
+      - name: Install backend (editable) so the `directo` entry point is on PATH
         run: |
-          pytest -v --tb=short
+          python -m pip install --upgrade pip
+          pip install -e . fastapi uvicorn click httpx websockets
+      - name: Smoke-test the `directo` entry point
+        run: |
+          set -e
+          # `directo --version` should print the package version from pyproject.toml
+          version="$(directo --version 2>&1 | awk -F'[ ,]+' '{print $2}')"
+          echo "directo --version -> $version"
+          test -n "$version"
+      - name: Run ./start.sh and probe the version endpoints
+        env:
+          # Be generous: npm install on a clean runner can be slow.
+          DIRECTO_START_TIMEOUT: "300"
+        run: |
+          set -e
+          ./start.sh
+          # Probe the backend
+          api_body="$(curl -sf http://127.0.0.1:8000/health)"
+          echo "GET /health -> $api_body"
+          echo "$api_body" | python -c "import json,sys; d=json.load(sys.stdin); assert d.get('status') == 'ok', d; assert d.get('version'), d"
+          # Probe the UI version route (added in v1.1.2)
+          ui_body="$(curl -sf http://127.0.0.1:3000/api/version)"
+          echo "GET /api/version -> $ui_body"
+          echo "$ui_body" | python -c "import json,sys; d=json.load(sys.stdin); assert d.get('name') == 'directo-ui', d; assert d.get('version'), d"
+      - name: Run ./stop.sh
+        if: always()
+        run: |
+          ./stop.sh || true

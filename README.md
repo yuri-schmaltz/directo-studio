@@ -1,7 +1,7 @@
 # 🎯 Directo — Creative AI Platform (Unified)
 
 [![Latest release](https://img.shields.io/github/v/release/yuri-schmaltz/directo-studio)](https://github.com/yuri-schmaltz/directo-studio/releases/latest)
-[![Tests](https://img.shields.io/badge/tests-213%2F213-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-297%2F297-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue)]()
 [![Node](https://img.shields.io/badge/node-22-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-teal)]()
@@ -23,6 +23,7 @@ cd directo
 - **UI**:    http://localhost:3000
 - **API**:   http://localhost:8000
 - **Docs**:  http://localhost:8000/docs
+- **Version endpoints**: `GET /health` (backend) + `GET /api/version` (UI) — used by `./start.sh` to detect stale services.
 
 That's it. `start.sh`:
 
@@ -87,53 +88,76 @@ make help
 
 ```
 directo/
-├── directo/                   Python lib (5 phases, 29 modules, ~12k LOC)
-│   ├── observability/         Phase 0
+├── directo/                   Python lib (5 phases + 3 add-ons, ~14k LOC)
+│   ├── observability/         Phase 0  — logging, metrics, tracing
 │   ├── vault/ queue/          Phase 0
 │   ├── gallery/ printing/     Phase 0
-│   ├── creative/              Phase 1
-│   ├── scale/                 Phase 2
-│   ├── cinema/                Phase 3
-│   ├── director/              Phase 4
-│   └── platform/              Phase 5  ← migrations, backup, costs,
+│   ├── creative/              Phase 1  — variants, refs, history, views
+│   ├── scale/                 Phase 2  — ComfyUI, VRAM, presets, enhance
+│   ├── cinema/                Phase 3  — 19 cinematic rules + parser + canvas
+│   ├── director/              Phase 4  — agent, moodboard, slerp, animatic
+│   ├── style_bible/           M1       — character/environment anchors,
+│   │                                     LoRA configs, prompt builder
+│   ├── media_hub/             M2       — local media generation orchestrator
+│   │   ├── video/             ffmpeg, ComfyUI, mock drivers
+│   │   ├── voices/            Piper, Bark, Coqui, mock TTS
+│   │   ├── subtitles/         Whisper + aligner
+│   │   ├── audio/             mixer + ducking
+│   │   └── orchestrator.py    async facade for the whole pipeline
+│   ├── engine/                OpenMontage bridge (5 cinematic pipelines)
+│   └── platform/              Phase 5  — migrations, backup, costs,
 │                                         cache, events, plugins, API, CLI
-├── ui/                        Next.js 14 web dashboard (12 pages)
-│   ├── app/                   App Router
-│   ├── components/            UI primitives
+├── ui/                        Next.js 14 web dashboard (15 pages)
+│   ├── app/                   App Router — projects, gallery, jobs,
+│   │                                     cinema, presets, animatics,
+│   │                                     style-bible, media-hub, settings,
+│   │                                     backup, events, about
+│   ├── components/            UI primitives + nav + style-bible view
 │   ├── lib/                   API client, WebSocket, types
 │   ├── Dockerfile
 │   └── package.json
 ├── start.sh                   local-mode bootstrapper (version-aware)
 ├── start-docker.sh            docker-mode bootstrapper
 ├── stop.sh                    tear-down for local mode
+├── stop-docker.sh             tear-down for docker mode
 ├── logs.sh                    tail both local log files
 ├── Makefile                   local + docker targets
-├── tests/                     213 Python tests
+├── tests/                     297 Python tests across 18 files
 ├── examples/                  Demo scripts
 ├── CHANGELOG.md               per-version release notes
 ├── docker-compose.yml         Docker flow
 └── pyproject.toml
 ```
 
-## 5 phases · 213 tests · 14,889 LOC
+## 5 phases · 297 tests · 14,258 LOC
 
-| Phase | Modules | Tests | Status |
+| Phase | Leaf modules | Tests | Status |
 |---|---|---|---|
-| 0 — stabilization | 5 | 56 | ✅ |
+| 0 — stabilization (observability, vault, queue, gallery, printing) | 10 | 56 | ✅ |
 | 1 — creative foundation | 4 | 25 | ✅ |
 | 2 — technical scale | 4 | 27 | ✅ |
-| 3 — differentiation (cinema) | 3 | 31 | ✅ |
-| 4 — creative direction | 4 | 22 | ✅ |
-| 5 — production hardening | 9 | 46 | ✅ |
-| **Total** | **29** | **213** | **✅** |
+| 3 — differentiation (cinema) | 3 | 35 | ✅ |
+| 4 — creative direction | 5 | 24 | ✅ |
+| 5 — production hardening | 9 | 55 | ✅ |
+| M1 — style bible (M1) | 3 | 25 | ✅ |
+| M2 — local media hub (video, voices, subtitles, audio, orchestrator) | 13 | 32 | ✅ |
+| M3 — FastAPI + UI integration | — | 15 | ✅ |
+| OCR e2e | — | 3 | ✅ |
+| **Total** | **53** | **297** | **✅** |
+
+> Phase counts in the table above are leaf modules (`.py` files excluding
+> `__init__.py`). The original v1.0.0 README quoted "29 modules" for the
+> 5-phase stack, which is now out of date.
 
 ## Interfaces
 
-- **Python API** — `import directo; ...` (97 exports)
-- **HTTP REST API** — `directo server` (15+ endpoints)
+- **Python API** — `import directo; ...` (94 named exports in `directo.__all__`,
+  plus everything in the submodules)
+- **HTTP REST API** — `directo server` (46 endpoints; routes counted on
+  the FastAPI `app` after `create_app()`)
 - **WebSocket** — `/ws/events` and `/ws/jobs/{id}` (live progress)
-- **CLI** — `directo status/gallery/jobs/cinema/backup/...`
-- **Web UI** — Next.js 14 dashboard (this monorepo's `ui/`)
+- **CLI** — `directo status/gallery/jobs/cinema/backup/...` (14 commands)
+- **Web UI** — Next.js 14 dashboard (this monorepo's `ui/`, 15 pages)
 - **Streamlit GUI** — `directo platform gui` (legacy)
 
 ## Manual venv setup (alternative to `./start.sh`)
@@ -146,7 +170,7 @@ recipe — e.g. to run the backend in a debugger, or to bypass the
 # 1. Backend
 python3 -m venv .venv
 .venv/bin/pip install -e . fastapi uvicorn click httpx websockets streamlit
-.venv/bin/pytest                                 # 213/213
+.venv/bin/pytest                                 # 297/297
 
 # --db-dir MUST come before the `server` subcommand — it's a top-level
 # Click group option, not a subcommand option. Put it after `server`
@@ -200,23 +224,48 @@ The verbose form still works if you prefer it:
 - **Production** — migrations, backup, costs (GPU/LLM/storage), cache, events, webhooks, plugins
 
 ### Web UI (Next.js 14)
-- **Dashboard** — live queue, gallery, costs, top projects
+- **Projects** — primary view; create, manage, set covers; replaces
+  the legacy dashboard
 - **Gallery** — browse, search, rate images (SWR)
 - **Jobs** — submit, list, cancel with real-time updates
 - **Presets** — browse 13 packs, render + LLM-enhance prompts
 - **Cinema** — 19-rule evaluation + script parser
-- **Projects** — create + manage
-- **Costs** — GPU/LLM/storage/bandwidth + timeseries chart
+- **Animatics** — multi-clip storyboard → video pipeline
+- **Style Bible** — character/environment anchors, LoRA configs,
+  prompt builder; JSON/YAML import/export
+- **Media Hub** — local video / voice / subtitle / audio generation
+  via the `LocalMediaOrchestrator` async facade
+- **Settings** — LLM backend selection (Ollama or remote), API key,
+  model + endpoint config
 - **Backup** — on-demand backup with integrity check
-- **Live Events** — real-time WebSocket event stream
+- **Events** — real-time WebSocket event stream
+- **About** — version, phases, build info
 
 ## Recent updates
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-- **v1.1.2** — `start.sh` is now **version-aware**: it probes `/health` (backend) and `/api/version` (UI), and **restarts any service that's on an older release than the source**. New `GET /api/version` route in the UI. Fixes the "(skipped) — already running" trap where a fresh clone could land on a stale build of either service.
-- **v1.1.1** — fixed the "Backend unreachable" error panel in the dashboard (wrong cwd, wrong venv path on Windows, `--db-dir` in the wrong position). Sidebar version badge bumped.
-- **v1.1.0** — local-mode bootstrapper (`start.sh` no longer needs Docker), stop.sh + logs.sh, `Makefile` reworked, proxy pass-through fix (the catch-all proxy no longer 404s on `/health` and `/metrics`).
+- **Style Bible (M1) + Local Media Hub (M2) + UI/FastAPI integration (M3)** —
+  three milestones landed after v1.1.5: a Style Bible subsystem (character
+  and environment anchors, LoRA configs, prompt builder with JSON/YAML
+  import/export), a Local Media Generation Hub (Piper / Bark / Coqui TTS,
+  ComfyUI + ffmpeg video drivers, Whisper subtitles, sidechain-ducking
+  audio mixer, async orchestrator), and a 5-pipeline OpenMontage engine
+  bridge exposed in the UI via a dedicated Media Hub page.
+- **v1.1.5** — `directo` console script, CI smoke test job, fix for the
+  legacy `ui/docker-compose.yml` Click `--db-dir` trap.
+- **v1.1.2** — `start.sh` is now **version-aware**: it probes `/health`
+  (backend) and `/api/version` (UI), and **restarts any service that's
+  on an older release than the source**. New `GET /api/version` route in
+  the UI. Fixes the "(skipped) — already running" trap where a fresh
+  clone could land on a stale build of either service.
+- **v1.1.1** — fixed the "Backend unreachable" error panel in the
+  dashboard (wrong cwd, wrong venv path on Windows, `--db-dir` in the
+  wrong position). Sidebar version badge bumped.
+- **v1.1.0** — local-mode bootstrapper (`start.sh` no longer needs
+  Docker), `stop.sh` + `logs.sh`, `Makefile` reworked, proxy
+  pass-through fix (the catch-all proxy no longer 404s on `/health`
+  and `/metrics`).
 
 ## Releases
 
@@ -253,10 +302,10 @@ git checkout v1.1.2
                               └── /api/proxy/* ──────────┘
                                   server-side proxy
 
-   HTTP REST: 15+ endpoints
-   WebSocket: /ws/events, /ws/jobs/{id}
-   CLI: 15+ commands
-   Python: 97 exports
+   HTTP REST: 46 endpoints
+   WebSocket: /ws/events, /ws/jobs/{id}, /api/media-hub/jobs/{id}/stream
+   CLI: 14 commands
+   Python: 94 named exports (+ submodules)
 ```
 
 ## License

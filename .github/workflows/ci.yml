@@ -49,6 +49,7 @@ jobs:
           ); print('platform: OK')"
           python -c "from directo.platform.api import create_app; from directo.platform.cli import main; print('app + cli: OK')"
           python -c "from directo.engine.openmontage_bridge import OPENMONTAGE_PIPELINES; assert len(OPENMONTAGE_PIPELINES) >= 1; print(f'openmontage: {len(OPENMONTAGE_PIPELINES)} pipelines')"
+          python -c "from directo.engine import OPENMONTAGE_PIPELINES, OpenMontageBridge, openmontage_bridge; assert openmontage_bridge is OpenMontageBridge(); print('engine package (with __init__.py): OK')"
       - name: Run tests
         run: pytest --tb=short
 

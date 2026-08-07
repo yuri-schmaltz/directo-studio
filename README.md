@@ -15,8 +15,8 @@ The complete Directo creative AI platform in **one repository**. Production-read
 ## Quick start
 
 ```bash
-git clone https://github.com/yuri-schmaltz/directo.git
-cd directo
+git clone https://github.com/yuri-schmaltz/directo_studio.git
+cd directo_studio
 ./start.sh    # creates .venv, installs deps, starts backend + UI, opens browser
 ```
 

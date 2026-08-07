@@ -59,8 +59,8 @@ otel = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yuri-schmaltz/directo"
-Issues = "https://github.com/yuri-schmaltz/directo/issues"
+Homepage = "https://github.com/yuri-schmaltz/directo_studio"
+Issues = "https://github.com/yuri-schmaltz/directo_studio/issues"
 
 [tool.setuptools.packages.find]
 include = ["directo*"]

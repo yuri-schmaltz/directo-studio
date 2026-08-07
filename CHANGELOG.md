@@ -5,6 +5,65 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2026-08-07
+
+### Changed
+
+- **Lint cleanup (691 → 68 ruff violations).** `ruff check --fix` +
+  `ruff check --fix --unsafe-fixes` applied 652 auto-fixes across 7
+  categories (UP006 typing.List → list, UP045 Optional → X | None,
+  I001 imports sort, UP035 deprecated, UP037 quoted annotations,
+  F541 f-string placeholders, SIM102/SIM117 nesting, RUF059 unused
+  unpacked, etc). `[tool.ruff.lint] per-file-ignores` added to
+  `pyproject.toml` to allow F401 in `tests/` — the false positives
+  come from `from __future__ import annotations` + conditional
+  `try: from ... except ImportError` imports (same gotcha as
+  pires-forge). 8 manual fixes for what the safe --fix could not
+  auto-resolve: SIM117 in `gui.py`, SIM102 in `gui.py`/`nodes.py`,
+  UP007 in `db.py`, B039 (mutable ContextVar default) in
+  `observability/logging.py`, an unsafe `row.get()` reverted in
+  `scale/presets.py` (sqlite3.Row has no `.get()` — that one would
+  have crashed the preset store), the truly unused `fastapi.Query`
+  in `platform/api.py`, and 2 dead Protocol imports in
+  `tests/test_local_media_orchestrator.py`. The 68 remaining
+  violations are documented patterns that need real refactoring
+  (23× BLE001 blind-except, 15× TRY004, 14× S110 try-except-pass,
+  6× B008, etc).
+
+### Added
+
+- **`Smoke import` step in `python-tests` CI job.** Imports every
+  public entry point of the codebase: `directo` public API,
+  `style_bible`, `media_hub`, `platform`, `app` + `cli`, and
+  `engine.openmontage_bridge`. Costs ~5s. Catches the entire class
+  of ImportError regressions that pires-forge v1.3.0 / v1.3.1 /
+  v1.3.2 shipped through 5 quality gates before being caught in
+  the wild (missing `_` alias in i18n shims, Gtk 3/4 removed
+  methods, modules referenced in manifests/entry-points that no
+  longer exist). Reference:
+  https://github.com/yuri-schmaltz/pires-forge/releases/tag/v1.3.2
+
+### Notes
+
+- **Mypy** went from 56 to 57 errors. The new one is a SIM102
+  collapsible-if. The pre-existing `directo/platform/gui.py:281`
+  str-vs-Scene bug is a known mypy limitation: `from __future__
+  import annotations` + locally-imported type makes mypy
+  mis-resolve the return type. Tried `cast(list[Scene], ...)`,
+  explicit annotation, and module-level import — none resolved it
+  without removing the future import. `reveal_type` confirms mypy
+  CAN see the type. Runtime works (297/297 tests pass). Long-term
+  fix is removing `from __future__ import annotations` from that
+  one file.
+
+### Verification
+
+- 297/297 pytest passing in 22.92s
+- ruff: 691 → 68 violations
+- mypy: 56 → 57 errors
+- All 6 smoke-import assertions pass locally
+- YAML lint of ci.yml: OK
+
 ## [1.1.6] - 2026-08-06
 
 ### Fixed

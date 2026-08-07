@@ -5,6 +5,52 @@ All notable changes to Directo are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2026-08-07
+
+### Fixed
+
+- **README + pyproject URLs** pointed at the non-existent
+  `yuri-schmaltz/directo` repo. The actual GitHub repo is
+  `yuri-schmaltz/directo_studio`, so the Quick start `git clone`
+  command would have failed at the first step. The `[project.urls]`
+  Homepage + Issues entries had the same bug. Replaced all 3
+  occurrences with the correct URL.
+
+### Changed
+
+- **Added `directo/engine/__init__.py`.** The `directo/engine/`
+  directory previously had no `__init__.py`, so it worked as a
+  PEP 420 namespace package. That's fragile: namespace package
+  resolution can break under collisions, conditional imports, or
+  normalisation rules, and type checkers (mypy) sometimes don't
+  follow the imports as well as a real package. The new
+  `__init__.py` re-exports the public API (`OPENMONTAGE_PIPELINES`,
+  `OpenMontageBridge`, `openmontage_bridge`) so callers can use
+  either `from directo.engine import ...` (new style) or the
+  legacy `from directo.engine.openmontage_bridge import
+  openmontage_bridge` (used by `directo/platform/api.py`) — both
+  return the same singleton. The CI smoke-import step now
+  asserts the identity to lock that in.
+
+### Security
+
+- **Next.js 14.2.18 → 14.2.35.** Dependabot had flagged 14.2.18 as
+  having a security advisory. The patch bump to 14.2.35 is the
+  latest stable in the 14.2.x line (no breaking changes vs
+  14.2.18 — all 15 page routes + 2 API routes build clean,
+  `npx tsc --noEmit` clean, bundle size delta < 1 KB).
+
+### Verification
+
+- 297/297 pytest passing
+- ruff: 68 violations (unchanged from v1.1.7)
+- mypy: 57 errors (unchanged from v1.1.7)
+- `npx tsc --noEmit` clean
+- `npm run build` clean, 17 routes, 87.3 kB shared bundle
+- 7 smoke-import assertions pass (added 1 for `directo.engine`)
+- Legacy + new `directo.engine` import paths return the same
+  `openmontage_bridge` singleton
+
 ## [1.1.7] - 2026-08-07
 
 ### Changed

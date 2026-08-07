@@ -16,13 +16,12 @@ anchor can be auto-injected into prompts to keep the tone consistent.
 
 from __future__ import annotations
 
-import json
-import re
 import time
 import uuid
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from directo.observability import get_logger
 
@@ -185,7 +184,7 @@ def _extract_palette_simple(image_path: Path, k: int = 6) -> list[str]:
     colors: list[str] = []
     for i in range(k):
         r, g, b = palette[i * 3 : i * 3 + 3]
-        colors.append("#{:02x}{:02x}{:02x}".format(r, g, b))
+        colors.append(f"#{r:02x}{g:02x}{b:02x}")
     return colors
 
 

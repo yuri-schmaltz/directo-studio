@@ -36,12 +36,10 @@ from typing import Any
 
 import streamlit as st
 
-from directo.gallery import Gallery, ImageRecord
+from directo.gallery import Gallery
 from directo.observability import configure_logging, get_logger
 from directo.platform.cache import CacheLayer, ImageCache, PromptCache
 from directo.platform.events import EventBus, EventKind, WebhookManager
-from directo.platform.migrations import MigrationManager
-from directo.printing import StoryboardConfig, StoryboardExporter, StoryboardLayout
 from directo.queue import Job, JobState, PersistentQueue
 from directo.scale import PresetStore
 
@@ -156,25 +154,24 @@ def page_jobs(svcs: dict[str, Any]) -> None:
     st.header("⚙️ Jobs")
     q: PersistentQueue = svcs["queue"]
     tab1, tab2 = st.tabs(["Submit", "Browse"])
-    with tab1:
-        with st.form("submit_job"):
-            kind = st.selectbox("Kind", [
-                "image.generate", "image.upscale", "video.render",
-                "audio.synth", "text.enhance",
-            ])
-            project = st.text_input("Project (optional)")
-            priority = st.slider("Priority", 0, 1000, 100)
-            payload = st.text_area("Payload (JSON)", value='{"prompt": "a beautiful scene"}', height=120)
-            submit = st.form_submit_button("Submit")
-            if submit:
-                try:
-                    p = json.loads(payload)
-                    j = Job(kind=kind, payload=p, project=project or None, priority=int(priority))
-                    jid = q.enqueue(j)
-                    svcs["bus"].publish(EventKind.JOB_ENQUEUED, {"job_id": jid, "kind": kind})
-                    st.success(f"submitted: {jid[:12]}...")
-                except json.JSONDecodeError as exc:
-                    st.error(f"invalid JSON: {exc}")
+    with tab1, st.form("submit_job"):
+        kind = st.selectbox("Kind", [
+            "image.generate", "image.upscale", "video.render",
+            "audio.synth", "text.enhance",
+        ])
+        project = st.text_input("Project (optional)")
+        priority = st.slider("Priority", 0, 1000, 100)
+        payload = st.text_area("Payload (JSON)", value='{"prompt": "a beautiful scene"}', height=120)
+        submit = st.form_submit_button("Submit")
+        if submit:
+            try:
+                p = json.loads(payload)
+                j = Job(kind=kind, payload=p, project=project or None, priority=int(priority))
+                jid = q.enqueue(j)
+                svcs["bus"].publish(EventKind.JOB_ENQUEUED, {"job_id": jid, "kind": kind})
+                st.success(f"submitted: {jid[:12]}...")
+            except json.JSONDecodeError as exc:
+                st.error(f"invalid JSON: {exc}")
     with tab2:
         state_filter = st.selectbox("State", [None, "pending", "running", "completed", "failed", "cancelled"], index=0)
         s = JobState(state_filter) if state_filter else None
@@ -241,46 +238,44 @@ def page_cinema(svcs: dict[str, Any]) -> None:
     from directo.cinema import CinemaEngine, parse_script_text
     engine = CinemaEngine()
     tab1, tab2 = st.tabs(["Evaluate prompt", "Parse script"])
-    with tab1:
-        with st.form("cinema-eval"):
-            prompt = st.text_area("Prompt", value="a man on horseback with a smartphone", height=80)
-            era = st.text_input("Era (e.g. '1920-1930', 'pre-1973')", value="")
-            run = st.form_submit_button("Evaluate")
-            if run and prompt:
-                ctx = {"era": era} if era else {}
-                report = engine.evaluate(prompt, context=ctx)
-                st.write(f"**Verdict:** {'⛔ BLOCKED' if report.blocked else '✅ OK'}")
-                score = getattr(report, "score", 1.0)
-                st.write(f"**Score:** {score:.2f}")
-                if report.warnings:
-                    st.warning("Warnings:")
-                    for w in report.warnings:
-                        st.write(f"  - {w}")
-                if report.suggestions:
-                    st.info("Suggestions:")
-                    for s in report.suggestions:
-                        st.write(f"  - {s}")
-                with st.expander("Augmented prompt"):
-                    st.code(report.augmented_prompt)
-                with st.expander("Full report"):
-                    st.json(report.to_dict())
-    with tab2:
-        with st.form("cinema-parse"):
-            text = st.text_area("Script", value=(
-                "INT. KITCHEN - DAY\n\n"
-                "ALICE looks out the window.\n\n"
-                "ALICE\nIt's a beautiful day.\n\n"
-                "EXT. PARK - DAY\n\n"
-                "BOB walks by with a dog.\n"
-            ), height=200)
-            hint = st.text_input("Hint (optional)", value="")
-            run = st.form_submit_button("Parse")
-            if run and text:
-                scenes = parse_script_text(text, hint=hint or "")
-                st.success(f"parsed {len(scenes)} scene(s)")
-                for s in scenes:
-                    with st.expander(f"Scene {s.number}: {s.slugline}"):
-                        st.json(s.to_dict())
+    with tab1, st.form("cinema-eval"):
+        prompt = st.text_area("Prompt", value="a man on horseback with a smartphone", height=80)
+        era = st.text_input("Era (e.g. '1920-1930', 'pre-1973')", value="")
+        run = st.form_submit_button("Evaluate")
+        if run and prompt:
+            ctx = {"era": era} if era else {}
+            report = engine.evaluate(prompt, context=ctx)
+            st.write(f"**Verdict:** {'⛔ BLOCKED' if report.blocked else '✅ OK'}")
+            score = getattr(report, "score", 1.0)
+            st.write(f"**Score:** {score:.2f}")
+            if report.warnings:
+                st.warning("Warnings:")
+                for w in report.warnings:
+                    st.write(f"  - {w}")
+            if report.suggestions:
+                st.info("Suggestions:")
+                for s in report.suggestions:
+                    st.write(f"  - {s}")
+            with st.expander("Augmented prompt"):
+                st.code(report.augmented_prompt)
+            with st.expander("Full report"):
+                st.json(report.to_dict())
+    with tab2, st.form("cinema-parse"):
+        text = st.text_area("Script", value=(
+            "INT. KITCHEN - DAY\n\n"
+            "ALICE looks out the window.\n\n"
+            "ALICE\nIt's a beautiful day.\n\n"
+            "EXT. PARK - DAY\n\n"
+            "BOB walks by with a dog.\n"
+        ), height=200)
+        hint = st.text_input("Hint (optional)", value="")
+        run = st.form_submit_button("Parse")
+        if run and text:
+            scenes = parse_script_text(text, hint=hint or "")
+            st.success(f"parsed {len(scenes)} scene(s)")
+            for s in scenes:
+                with st.expander(f"Scene {s.number}: {s.slugline}"):
+                    st.json(s.to_dict())
 
 
 

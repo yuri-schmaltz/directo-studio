@@ -72,8 +72,8 @@ def test_metrics_independent_per_registry():
 
 def test_tracer_span_records_duration():
     tracer = Tracer()
-    with tracer.span("op", kind="test") as sp:
-        x = sum(range(100))
+    with tracer.span("op", kind="test"):
+        sum(range(100))
     spans = tracer.drain()
     assert len(spans) == 1
     assert spans[0]["name"] == "op"
@@ -84,9 +84,8 @@ def test_tracer_span_records_duration():
 
 def test_tracer_records_exception():
     tracer = Tracer()
-    with pytest.raises(RuntimeError):
-        with tracer.span("op.fail"):
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError), tracer.span("op.fail"):
+        raise RuntimeError("boom")
     spans = tracer.drain()
     assert spans[0]["status"] == "error"
     assert "boom" in spans[0]["error"]

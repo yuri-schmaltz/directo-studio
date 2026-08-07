@@ -23,9 +23,9 @@ import sqlite3
 import threading
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import get_logger
@@ -129,7 +129,7 @@ class ImageHistory:
                 ),
             )
         log.bind(job_id=job_id, iteration=iteration).info(
-            f"history entry recorded", image_id=image_id[:8]
+            "history entry recorded", image_id=image_id[:8]
         )
         return entry_id
 
@@ -249,7 +249,7 @@ class ImageHistory:
         )
         new_id = gallery.add(restored)
         log.bind(job_id=job_id, iteration=iteration, by=by).info(
-            f"image restored", new_id=new_id[:8]
+            "image restored", new_id=new_id[:8]
         )
         return new_id
 
@@ -312,8 +312,8 @@ class ImageHistory:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "ImageHistory":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()

@@ -38,7 +38,6 @@ from directo.creative import (
     ReferenceKind,
     ReferenceLibrary,
     Variant,
-    VariantLock,
     VariantSet,
     VariantStore,
     ViewLayout,
@@ -128,7 +127,7 @@ def main() -> None:
         # Lock variant 2 as the winner
         vs1.lock_variant(2, locked_by="director")
         vstore.save(vs1)
-        log.info(f"locked variant 2 as the chosen shot (by director)")
+        log.info("locked variant 2 as the chosen shot (by director)")
 
         # Open variant set (no decision yet)
         vs2 = VariantSet(
@@ -173,7 +172,7 @@ def main() -> None:
         query_img = refs_dir / "query_warm.png"
         make_placeholder_png(query_img, "warm", (210, 110, 60))
         matches = lib.find_similar_to_image(str(query_img), top_k=3)
-        log.info(f"search for warm tones — top 3:")
+        log.info("search for warm tones — top 3:")
         for ref, score in matches:
             log.info(f"  {ref.title:20s} score={score:.3f}")
 

@@ -3,25 +3,18 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from directo.scale import (
     ComfyUINode,
-    GPUInfo,
     NodeHealth,
     NodeRegistry,
     Preset,
     PresetStore,
     PromptEnhancer,
-    QuantLevel,
-    VRAMProfile,
     recommend_quant_for_model,
 )
 from directo.scale.enhance import TemplateEnhancer
-from directo.scale.vram import _QUANT_TABLE
-
 
 # ============================================================
 # VRAM
@@ -46,7 +39,7 @@ def test_recommend_quant_for_model_extreme():
 def test_vram_profile_no_gpu(monkeypatch):
     """When no GPU is detected, profile returns CPU defaults."""
     from directo.scale import vram as vram_mod
-    monkeypatch.setattr(vram_mod, "detect_gpus", lambda: [])
+    monkeypatch.setattr(vram_mod, "detect_gpus", list)
     p = vram_mod.profile()
     assert p.total_vram_mb == 0
     assert "no GPU" in p.notes[0]

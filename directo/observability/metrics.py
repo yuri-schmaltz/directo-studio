@@ -16,15 +16,15 @@ Key metrics:
 from __future__ import annotations
 
 import threading
-from typing import Any
+from typing import Self
 
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,
     Gauge,
     Histogram,
     generate_latest,
-    CONTENT_TYPE_LATEST,
 )
 
 
@@ -36,10 +36,10 @@ class MetricsCollector:
     registry (useful for tests).
     """
 
-    _instances: dict[int, "MetricsCollector"] = {}
+    _instances: dict[int, MetricsCollector] = {}
     _lock = threading.Lock()
 
-    def __new__(cls, registry: CollectorRegistry | None = None) -> "MetricsCollector":
+    def __new__(cls, registry: CollectorRegistry | None = None) -> Self:
         # Singleton-per-registry pattern.
         reg_id = id(registry) if registry is not None else -1
         with cls._lock:

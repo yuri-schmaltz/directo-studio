@@ -1,8 +1,6 @@
 """FFmpegRenderer for visual overlays, crossfades, aspect ratio letterboxing, and subtitle burn-in."""
 
-import os
 import subprocess
-from typing import List, Optional
 
 from directo.media_hub.video.comfyui import parse_aspect_ratio
 
@@ -16,14 +14,14 @@ class FFmpegRenderer:
     def build_command(
         self,
         raw_video: str,
-        audio_track: Optional[str] = None,
-        subtitles_srt: Optional[str] = None,
+        audio_track: str | None = None,
+        subtitles_srt: str | None = None,
         aspect_ratio: str = "16:9",
         padding: bool = False,
-        overlay_image: Optional[str] = None,
+        overlay_image: str | None = None,
         crossfade_duration: float = 0.5,
-        output_path: Optional[str] = None,
-    ) -> List[str]:
+        output_path: str | None = None,
+    ) -> list[str]:
         width, height = parse_aspect_ratio(aspect_ratio)
         out_path = output_path or "/tmp/rendered_output.mp4"
 
@@ -71,13 +69,13 @@ class FFmpegRenderer:
     def render_video(
         self,
         raw_video: str,
-        audio_track: Optional[str] = None,
-        subtitles_srt: Optional[str] = None,
+        audio_track: str | None = None,
+        subtitles_srt: str | None = None,
         aspect_ratio: str = "16:9",
         padding: bool = False,
-        overlay_image: Optional[str] = None,
+        overlay_image: str | None = None,
         crossfade_duration: float = 0.5,
-        output_path: Optional[str] = None,
+        output_path: str | None = None,
     ) -> str:
         cmd = self.build_command(
             raw_video=raw_video,
@@ -94,7 +92,7 @@ class FFmpegRenderer:
 
         # Execute subprocess (in real runs or mocked in unit tests)
         try:
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            subprocess.run(cmd, capture_output=True, check=True)
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Fallback output generation for mock/offline testing if binary is not present or mocked
             with open(out_path, "w", encoding="utf-8") as f:

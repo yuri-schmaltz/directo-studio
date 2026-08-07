@@ -3,16 +3,12 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from directo.cinema import (
     CanvasStore,
     CinemaEngine,
-    Panel,
     RuleKind,
-    Scene,
     StoryboardCanvas,
     parse_fountain,
     parse_plain_text,
@@ -20,8 +16,6 @@ from directo.cinema import (
     parse_script_text,
     scenes_to_prompts,
 )
-from directo.cinema.engine import _builtin_rules
-
 
 # ============================================================
 # Cinema rules engine
@@ -103,7 +97,7 @@ def test_auto_apply_suggests_can_be_disabled():
 
 def test_custom_rule_added():
     engine = CinemaEngine()
-    from directo.cinema.engine import RuleResult, Rule
+    from directo.cinema.engine import RuleResult
 
     def no_purple(prompt: str, context: dict) -> list[RuleResult]:
         if "purple" in prompt.lower():

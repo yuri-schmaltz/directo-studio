@@ -14,13 +14,13 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import inspect
 import time
 import uuid
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from directo.observability import bind_context, correlation_id_var, get_logger
-from directo.queue.job import Job, JobState
+from directo.queue.job import Job
 from directo.queue.persistent_queue import PersistentQueue
 
 log = get_logger("directo.worker")
@@ -75,7 +75,7 @@ class Worker:
         while not self._stop.is_set():
             try:
                 job = await asyncio.to_thread(self._queue.claim, self._worker_id, self._node)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 log.exception("claim failed; backing off")
                 await asyncio.sleep(self._poll_interval * 5)
                 continue
@@ -83,7 +83,7 @@ class Worker:
             if job is None:
                 try:
                     await asyncio.wait_for(self._stop.wait(), timeout=self._poll_interval)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
                 continue
 
@@ -102,7 +102,7 @@ class Worker:
             log.info(f"worker {self._worker_id} draining in-flight job")
             try:
                 await asyncio.wait_for(self._active_task, timeout=30.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 log.warning("in-flight job did not finish in 30s; leaving in queue")
         log.info(f"worker {self._worker_id} stopped")
 
@@ -128,12 +128,12 @@ class Worker:
                 duration = time.perf_counter() - start
                 await asyncio.to_thread(self._queue.complete, job.id, result)
                 log.info(f"job completed in {duration:.2f}s")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 duration = time.perf_counter() - start
                 err = f"job timed out after {job.timeout_seconds}s (ran {duration:.2f}s)"
                 log.error(err)
                 await asyncio.to_thread(self._queue.fail, job.id, err)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 duration = time.perf_counter() - start
                 err = f"{type(exc).__name__}: {exc}"
                 log.exception(f"job failed after {duration:.2f}s")

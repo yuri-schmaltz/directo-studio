@@ -40,9 +40,10 @@ from __future__ import annotations
 import sqlite3
 import threading
 import time
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from directo.observability import get_logger
 
@@ -50,7 +51,7 @@ log = get_logger("directo.platform.migrations")
 
 
 # Registry: module name -> list of Migration
-_REGISTRY: dict[str, list["Migration"]] = {}
+_REGISTRY: dict[str, list[Migration]] = {}
 
 
 @dataclass

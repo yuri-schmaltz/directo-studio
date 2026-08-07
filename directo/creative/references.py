@@ -31,9 +31,10 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Protocol
+from typing import Any, Protocol, Self
 
 from directo.observability import get_logger
 
@@ -80,7 +81,7 @@ class Reference:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Reference":
+    def from_dict(cls, data: dict[str, Any]) -> Reference:
         d = dict(data)
         d["kind"] = ReferenceKind(d.get("kind", "reference"))
         d.setdefault("tags", [])
@@ -483,8 +484,8 @@ class ReferenceLibrary:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "ReferenceLibrary":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()

@@ -6,7 +6,7 @@ import enum
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
-from typing import Any, Literal
+from typing import Any
 
 
 class JobState(str, enum.Enum):
@@ -74,7 +74,7 @@ class Job:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Job":
+    def from_dict(cls, data: dict[str, Any]) -> Job:
         """Deserialize from a dict (state string → enum)."""
         d = dict(data)
         d["state"] = JobState(d["state"])

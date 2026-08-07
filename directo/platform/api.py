@@ -25,14 +25,19 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 try:
     from fastapi import (  # type: ignore
-        FastAPI, HTTPException, WebSocket, WebSocketDisconnect,
-        status, Body, Query,
+        Body,
+        FastAPI,
+        HTTPException,
+        WebSocket,
+        WebSocketDisconnect,
+        status,
     )
     from fastapi.responses import JSONResponse  # type: ignore
     HAS_FASTAPI = True
@@ -40,24 +45,28 @@ except ImportError:
     HAS_FASTAPI = False
 
 from directo.cinema import (
-    CanvasStore, CinemaEngine, StoryboardCanvas, parse_script_text,
+    CanvasStore,
+    CinemaEngine,
+    StoryboardCanvas,
+    parse_script_text,
 )
 from directo.director import (
-    CreativeDirector, ProjectMemory, TemplateBackend,
+    CreativeDirector,
+    ProjectMemory,
 )
-from directo.director.backends import make_backend, DynamicLLMBackend
+from directo.director.backends import DynamicLLMBackend
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import MetricsCollector, configure_logging, get_logger
 from directo.platform.backup import BackupManager
 from directo.platform.cache import CacheLayer
 from directo.platform.events import Event, EventBus, EventKind, WebhookManager
 from directo.printing import StoryboardConfig, StoryboardExporter, StoryboardLayout
-from directo.queue import PersistentQueue, Job
+from directo.queue import Job, PersistentQueue
 from directo.scale import PresetStore
 from directo.scale.enhance import PromptEnhancer
 from directo.style_bible import StyleBibleStore
 from directo.style_bible.models import (
-    CharacterProfile, EnvironmentAnchor, StyleBible,
+    StyleBible,
 )
 
 log = get_logger("directo.platform.api")
@@ -68,7 +77,7 @@ log = get_logger("directo.platform.api")
 # =====================================================================
 
 
-def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
+def create_app(db_dir: str | Path = "./directo_data") -> FastAPI:
     """Build the FastAPI app with all dependencies wired.
 
     The app holds references to long-lived services (queue, gallery,
@@ -97,7 +106,7 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     style_bible_store = StyleBibleStore(db_dir / "style_bibles.db")
 
     @asynccontextmanager
-    async def lifespan(app: "FastAPI") -> AsyncGenerator[None, None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.info("Directo API starting")
         configure_logging(level="INFO", json_output=True)
         bus.publish(EventKind.PROJECT_CREATED, {"event": "api_started"})
@@ -114,7 +123,10 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
         async def handle_animatic_generate(job):
             log.info(f"Animatic generation started: {job.payload}")
             from directo.director.animatic import (
-                AnimaticProject, AnimaticClip, AnimaticBuilder, AIVideoBackend
+                AIVideoBackend,
+                AnimaticBuilder,
+                AnimaticClip,
+                AnimaticProject,
             )
             payload = job.payload
 
@@ -824,7 +836,6 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
 
     @app.get("/api/settings")
     def settings_get() -> dict[str, Any]:
-        import json
         p = db_dir / "settings.json"
         if p.exists():
             try:
@@ -845,7 +856,6 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
 
     @app.post("/api/settings")
     def settings_save(payload: dict[str, Any]) -> dict[str, Any]:
-        import json
         p = db_dir / "settings.json"
         with open(p, "w") as f:
             json.dump(payload, f, indent=2)
@@ -854,7 +864,6 @@ def create_app(db_dir: str | Path = "./directo_data") -> "FastAPI":
     @app.get("/api/settings/ollama-models")
     def list_ollama_models(host: str = "http://localhost:11434") -> list[str]:
         import urllib.request
-        import json
         try:
             url = host.rstrip("/") + "/api/tags"
             req = urllib.request.Request(url)

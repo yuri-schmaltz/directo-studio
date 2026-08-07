@@ -1,6 +1,7 @@
 """Mock Video Driver for testing."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from directo.media_hub.video.base import VideoResult
 from directo.media_hub.video.comfyui import parse_aspect_ratio
 
@@ -10,12 +11,12 @@ class MockVideoDriver:
 
     def __init__(self, output_dir: str = "/tmp") -> None:
         self.output_dir = output_dir
-        self.generated_jobs: List[Dict[str, Any]] = []
+        self.generated_jobs: list[dict[str, Any]] = []
 
     def generate_video(
         self,
         prompt: str,
-        loras: Optional[List[Dict[str, Any]]] = None,
+        loras: list[dict[str, Any]] | None = None,
         seed: int = 42,
         duration: float = 5.0,
         aspect_ratio: str = "16:9",

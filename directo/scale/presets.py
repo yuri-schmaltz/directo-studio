@@ -30,7 +30,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Self
 
 from directo.observability import get_logger
 
@@ -92,7 +92,7 @@ class Preset:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Preset":
+    def from_dict(cls, data: dict[str, Any]) -> Preset:
         # Drop any unknown keys for forward compatibility
         valid = {f for f in cls.__dataclass_fields__}
         return cls(**{k: v for k, v in data.items() if k in valid})
@@ -601,7 +601,7 @@ class PresetStore:
         return Preset(
             id=row["id"], name=row["name"], kind=row["kind"],
             era=row["era"], description=row["description"],
-            image_url=row["image_url"] if "image_url" in row.keys() and row["image_url"] else f"/presets/{row['id']}.jpg",
+            image_url=row["image_url"] if row["image_url"] else f"/presets/{row['id']}.jpg",
             model=row["model"], loras=json.loads(row["loras_json"]),
             sampler=row["sampler"], scheduler=row["scheduler"],
             steps=row["steps"], cfg_scale=row["cfg_scale"],
@@ -619,8 +619,8 @@ class PresetStore:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "PresetStore":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()

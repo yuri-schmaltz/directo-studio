@@ -77,6 +77,15 @@ markers = [
 line-length = 100
 target-version = "py311"
 
+[tool.ruff.lint]
+# F401 in test files is often a false positive: the import is used in a
+# type annotation that is stored as a string under `from __future__
+# import annotations`, which ruff cannot resolve. The test files also
+# rely on `try: from directo.style_bible... except ImportError` style
+# conditional imports that are needed for the smoke-test fallback
+# path, so we let the F401 stay in test code.
+per-file-ignores = { "tests/**/*.py" = ["F401"] }
+
 [tool.mypy]
 python_version = "3.11"
 strict_optional = true

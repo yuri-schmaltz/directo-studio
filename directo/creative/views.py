@@ -22,11 +22,10 @@ from __future__ import annotations
 import base64
 import enum
 import html
-import json
 import mimetypes
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
 
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import get_logger
@@ -138,7 +137,7 @@ class GalleryView:
 
         filters = ""
         if c.include_filters:
-            filters = f"""
+            filters = """
             <div class="filters">
               <input id="search" type="search" placeholder="Search prompt, model, notes…">
               <label>Min rating

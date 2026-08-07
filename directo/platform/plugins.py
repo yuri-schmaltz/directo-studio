@@ -37,20 +37,17 @@ from __future__ import annotations
 
 import importlib
 import inspect
-from typing import Any, Callable, TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from directo.observability import get_logger
-from directo.platform.events import AsyncListener, Event, EventKind
+from directo.platform.events import AsyncListener, EventKind
 
 if TYPE_CHECKING:
-    from directo.cinema import CinemaEngine
-    from directo.director.animatic import VideoBackend
-    from directo.director.moodboard import MoodAnchor
-    from directo.gallery import ImageRecord
     from directo.creative.references import Reference
+    from directo.director.animatic import VideoBackend
     from directo.scale.enhance import LLMProvider
     from directo.scale.presets import Preset
-    from directo.creative.variants import VariantSet
 
 log = get_logger("directo.platform.plugins")
 
@@ -65,11 +62,11 @@ class PluginHooks:
 
     def __init__(self) -> None:
         self._event_listeners: list[tuple[EventKind, AsyncListener]] = []
-        self._presets: list["Preset"] = []
-        self._llm_providers: list["LLMProvider"] = []
-        self._video_backends: list["VideoBackend"] = []
+        self._presets: list[Preset] = []
+        self._llm_providers: list[LLMProvider] = []
+        self._video_backends: list[VideoBackend] = []
         self._canvas_exporters: list[Callable[[Any, str], None]] = []
-        self._reference_resolvers: list[Callable[[str], "Reference | None"]] = []
+        self._reference_resolvers: list[Callable[[str], Reference | None]] = []
         self._cost_multipliers: dict[str, float] = {}
         self._cinema_rule_packs: list[tuple[str, Callable[[str, dict], list]]] = []
         self._variant_strategies: list[tuple[str, Callable[..., Any]]] = []
@@ -92,15 +89,15 @@ class PluginHooks:
 
     # ----------------- Component registration -----------------
 
-    def register_preset(self, preset: "Preset") -> None:
+    def register_preset(self, preset: Preset) -> None:
         self._presets.append(preset)
         log.info(f"plugin registered preset: {preset.id}")
 
-    def register_llm_provider(self, provider: "LLMProvider") -> None:
+    def register_llm_provider(self, provider: LLMProvider) -> None:
         self._llm_providers.append(provider)
         log.info(f"plugin registered LLM provider: {provider.name}")
 
-    def register_video_backend(self, backend: "VideoBackend") -> None:
+    def register_video_backend(self, backend: VideoBackend) -> None:
         self._video_backends.append(backend)
         log.info(f"plugin registered video backend: {backend.name}")
 
@@ -108,7 +105,7 @@ class PluginHooks:
         self._canvas_exporters.append(exporter)
         log.info("plugin registered canvas exporter")
 
-    def register_reference_resolver(self, resolver: Callable[[str], "Reference | None"]) -> None:
+    def register_reference_resolver(self, resolver: Callable[[str], Reference | None]) -> None:
         self._reference_resolvers.append(resolver)
         log.info("plugin registered reference resolver")
 
@@ -147,15 +144,15 @@ class PluginHooks:
         return list(self._event_listeners)
 
     @property
-    def presets(self) -> list["Preset"]:
+    def presets(self) -> list[Preset]:
         return list(self._presets)
 
     @property
-    def llm_providers(self) -> list["LLMProvider"]:
+    def llm_providers(self) -> list[LLMProvider]:
         return list(self._llm_providers)
 
     @property
-    def video_backends(self) -> list["VideoBackend"]:
+    def video_backends(self) -> list[VideoBackend]:
         return list(self._video_backends)
 
     @property
@@ -163,7 +160,7 @@ class PluginHooks:
         return list(self._canvas_exporters)
 
     @property
-    def reference_resolvers(self) -> list[Callable[[str], "Reference | None"]]:
+    def reference_resolvers(self) -> list[Callable[[str], Reference | None]]:
         return list(self._reference_resolvers)
 
     @property

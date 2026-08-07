@@ -31,7 +31,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, Self
 
 from directo.observability import get_logger
 
@@ -238,10 +238,10 @@ class ProjectMemory:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "ProjectMemory":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
 
@@ -433,8 +433,7 @@ class CreativeDirector:
         angles = ["establishing wide", "low angle", "high angle", "over-the-shoulder",
                   "close-up", "tracking", "POV", "crane up", "dolly in", "two-shot"]
         framings = ["wide", "medium", "medium close-up", "extreme close-up", "full"]
-        import random
-        rng = random.Random(goal)
+        random.Random(goal)
         return [
             {
                 "shot": str(i + 1),

@@ -19,9 +19,11 @@ def test_set_and_get():
 
 
 def test_get_missing_raises():
-    with CredentialVault.from_passphrase("p", db_path=":memory:") as v:
-        with pytest.raises(CredentialNotFound):
-            v.get("nope")
+    with (
+        CredentialVault.from_passphrase("p", db_path=":memory:") as v,
+        pytest.raises(CredentialNotFound),
+    ):
+        v.get("nope")
 
 
 def test_overwrite_increments_version():

@@ -22,9 +22,8 @@ import gzip
 import shutil
 import sqlite3
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
 
 from directo.observability import get_logger
 

@@ -11,8 +11,6 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from directo.director import (
-    StyleGuide,
-    from_gallery,
     AnimaticBuilder,
     AnimaticClip,
     AnimaticProject,
@@ -23,8 +21,8 @@ from directo.director import (
     ProjectMemory,
     StyleGuide,
     TemplateBackend,
+    from_gallery,
 )
-
 
 # ============================================================
 # ProjectMemory
@@ -55,7 +53,7 @@ def test_project_memory_record_decision():
     with ProjectMemory(":memory:") as mem:
         from directo.director.agent import Decision
         d = Decision(id="", decision_key="hero_look", choice="green scales, scarred")
-        d_id = mem.record_decision(d)
+        mem.record_decision(d)
         decisions = mem.get_decisions("any")
         assert any(x.decision_key == "hero_look" for x in decisions)
 

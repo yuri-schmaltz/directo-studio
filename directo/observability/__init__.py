@@ -12,22 +12,22 @@ Provides three primitives that work together:
 """
 
 from directo.observability.logging import (
-    configure_logging,
-    get_logger,
     bind_context,
     clear_context,
+    configure_logging,
     correlation_id_var,
+    get_logger,
 )
 from directo.observability.metrics import MetricsCollector
 from directo.observability.tracing import Tracer, trace
 
 __all__ = [
-    "configure_logging",
-    "get_logger",
-    "bind_context",
-    "clear_context",
-    "correlation_id_var",
     "MetricsCollector",
     "Tracer",
+    "bind_context",
+    "clear_context",
+    "configure_logging",
+    "correlation_id_var",
+    "get_logger",
     "trace",
 ]

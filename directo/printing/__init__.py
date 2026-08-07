@@ -12,15 +12,15 @@ rating, and an optional shot label.
 """
 
 from directo.printing.storyboard import (
+    StoryboardConfig,
     StoryboardExporter,
     StoryboardLayout,
     StoryboardPanel,
-    StoryboardConfig,
 )
 
 __all__ = [
+    "StoryboardConfig",
     "StoryboardExporter",
     "StoryboardLayout",
     "StoryboardPanel",
-    "StoryboardConfig",
 ]

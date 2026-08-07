@@ -23,10 +23,11 @@ import json
 import sqlite3
 import threading
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Self
 
-from directo.observability import MetricsCollector, bind_context, get_logger
+from directo.observability import MetricsCollector, get_logger
 from directo.platform.db import get_db_connection
 from directo.queue.job import Job, JobState
 
@@ -412,10 +413,10 @@ class PersistentQueue:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "PersistentQueue":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
 

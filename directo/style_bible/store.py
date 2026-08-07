@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import json
+import builtins
 import os
 import sqlite3
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Self
 
 from directo.observability import get_logger
 from directo.style_bible.models import StyleBible
@@ -71,7 +71,7 @@ class StyleBibleStore:
             if hasattr(self, "_conn") and self._conn:
                 self._conn.close()
 
-    def __enter__(self) -> StyleBibleStore:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -108,7 +108,7 @@ class StyleBibleStore:
         """Alias for save_bible to support existing store API."""
         return self.save_bible(style_bible)
 
-    def load_bible(self, id: str) -> Optional[StyleBible]:
+    def load_bible(self, id: str) -> StyleBible | None:
         """Load a Style Bible by ID. Returns None if not found."""
         if not isinstance(id, str) or not id.strip():
             raise ValueError("ID must be a non-empty string.")
@@ -130,7 +130,7 @@ class StyleBibleStore:
             raise KeyError(f"StyleBible with ID '{bible_id}' not found.")
         return bible
 
-    def list_bibles(self) -> List[Dict[str, Any]]:
+    def list_bibles(self) -> builtins.list[dict[str, Any]]:
         """List metadata summaries of all saved Style Bibles."""
         with self._lock:
             rows = self._conn.execute(
@@ -163,7 +163,7 @@ class StyleBibleStore:
             })
         return results
 
-    def list(self) -> List[Dict[str, Any]]:
+    def list(self) -> builtins.list[dict[str, Any]]:
         """Alias for list_bibles."""
         return self.list_bibles()
 
@@ -179,7 +179,7 @@ class StyleBibleStore:
         """Alias for delete_bible."""
         return self.delete_bible(bible_id)
 
-    def search(self, query: str) -> List[StyleBible]:
+    def search(self, query: str) -> builtins.list[StyleBible]:
         """Search saved Style Bibles matching query string."""
         if not isinstance(query, str) or not query.strip():
             return []

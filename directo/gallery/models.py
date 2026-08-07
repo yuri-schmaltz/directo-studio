@@ -58,7 +58,7 @@ class ImageRecord:
         return asdict(self)
 
     @classmethod
-    def from_row(cls, row: dict[str, Any]) -> "ImageRecord":
+    def from_row(cls, row: dict[str, Any]) -> ImageRecord:
         d = dict(row)
         # DB column ``tags_json`` → Python field ``tags`` (list)
         if "tags_json" in d and "tags" not in d:

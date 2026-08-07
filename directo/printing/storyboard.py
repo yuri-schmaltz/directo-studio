@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import enum
 import textwrap
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, A3, LETTER
-from reportlab.lib.units import cm, mm
-from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A3, A4, LETTER
+from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 
 from directo.gallery import Gallery, ImageRecord
 from directo.observability import get_logger

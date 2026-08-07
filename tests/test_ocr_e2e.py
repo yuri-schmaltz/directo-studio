@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
-from PIL import Image, ImageDraw, ImageFont
-from directo.cinema.parser import load_text_from_file, _load_pdf, _parse_slugline
+from PIL import Image, ImageDraw
+
+from directo.cinema.parser import _load_pdf, _parse_slugline, load_text_from_file
 
 
 @pytest.fixture

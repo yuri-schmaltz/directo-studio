@@ -31,9 +31,8 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Self
 
-from directo.gallery import ImageRecord
 from directo.observability import get_logger
 
 log = get_logger("directo.variants")
@@ -97,7 +96,7 @@ class VariantSet:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "VariantSet":
+    def from_dict(cls, data: dict[str, Any]) -> VariantSet:
         d = dict(data)
         d["strategy"] = GenerationStrategy(d.get("strategy", "seed_variation"))
         d["lock"] = VariantLock(d.get("lock", "open"))
@@ -333,10 +332,10 @@ class VariantStore:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "VariantStore":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
 

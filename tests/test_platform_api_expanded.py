@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
+
 from directo.platform.api import create_app
 
 
@@ -160,7 +159,7 @@ def test_style_bible_export_format(api_client):
 
 
 def test_settings_api(api_client):
-    client, tmp_path = api_client
+    client, _tmp_path = api_client
     get_s = client.get("/api/settings")
     assert get_s.status_code == 200
     assert "llm_backend" in get_s.json()

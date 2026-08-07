@@ -1,9 +1,9 @@
 """Whisper Subtitle Generator for SRT, VTT, and JSON alignment formats."""
 
-from dataclasses import dataclass, field
 import json
 import os
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -20,13 +20,13 @@ class SubtitleResult:
     srt_path: str
     vtt_path: str
     json_path: str
-    segments: List[SubtitleSegment] = field(default_factory=list)
+    segments: list[SubtitleSegment] = field(default_factory=list)
     language: str = "en"
 
 
 def format_srt_timestamp(seconds: float) -> str:
     """Format seconds float into SRT timestamp: HH:MM:SS,mmm"""
-    millis = int(round((seconds - int(seconds)) * 1000))
+    millis = round((seconds - int(seconds)) * 1000)
     secs = int(seconds)
     mins = secs // 60
     secs = secs % 60
@@ -37,7 +37,7 @@ def format_srt_timestamp(seconds: float) -> str:
 
 def format_vtt_timestamp(seconds: float) -> str:
     """Format seconds float into VTT timestamp: HH:MM:SS.mmm"""
-    millis = int(round((seconds - int(seconds)) * 1000))
+    millis = round((seconds - int(seconds)) * 1000)
     secs = int(seconds)
     mins = secs // 60
     secs = secs % 60
@@ -56,14 +56,14 @@ class WhisperSubtitleGenerator:
     def generate_subtitles(
         self,
         speech_audio_path: str,
-        dialogue_events: Optional[List[Dict[str, Any]]] = None,
+        dialogue_events: list[dict[str, Any]] | None = None,
         language: str = "en",
         output_dir: str = "/tmp",
     ) -> SubtitleResult:
         if not speech_audio_path or not isinstance(speech_audio_path, str):
             raise ValueError("Speech audio path must be a valid non-empty string.")
 
-        segments: List[SubtitleSegment] = []
+        segments: list[SubtitleSegment] = []
 
         if dialogue_events:
             current_time = 0.0

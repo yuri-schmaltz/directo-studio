@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 
-
 pytestmark = pytest.mark.gui
 
 
@@ -24,7 +23,7 @@ def workspace(tmp_path):
 
 def test_gui_imports():
     """The gui module must import without error."""
-    from directo.platform import gui  # noqa: F401
+    from directo.platform import gui
     assert callable(gui.main)
     assert callable(gui.run)
     assert callable(gui.get_services)

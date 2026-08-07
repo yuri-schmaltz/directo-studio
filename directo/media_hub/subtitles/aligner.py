@@ -1,13 +1,14 @@
 """Subtitle aligner for precise timestamp alignment."""
 
-from typing import Any, Dict, List
+from typing import Any
+
 from directo.media_hub.subtitles.whisper import SubtitleSegment
 
 
 class SubtitleAligner:
     """Aligns subtitle segments with audio waveform features and speech activity events."""
 
-    def align_events(self, events: List[Dict[str, Any]]) -> List[SubtitleSegment]:
+    def align_events(self, events: list[dict[str, Any]]) -> list[SubtitleSegment]:
         aligned = []
         curr_time = 0.0
         for ev in events:

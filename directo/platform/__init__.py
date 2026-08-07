@@ -12,20 +12,6 @@ Modules:
 - :mod:`directo.platform.gui`          — Streamlit web dashboard
 """
 
-from directo.platform.migrations import (
-    Migration,
-    MigrationError,
-    MigrationManager,
-    register_migrations,
-    list_registered_migrations,
-)
-from directo.platform.migrations import (
-    Migration,
-    MigrationError,
-    MigrationManager,
-    register_migrations,
-    list_registered_migrations,
-)
 from directo.platform.backup import BackupManager, BackupResult, MultiBackup
 from directo.platform.cache import (
     CacheLayer,
@@ -40,6 +26,13 @@ from directo.platform.events import (
     Webhook,
     WebhookManager,
 )
+from directo.platform.migrations import (
+    Migration,
+    MigrationError,
+    MigrationManager,
+    list_registered_migrations,
+    register_migrations,
+)
 from directo.platform.plugins import (
     PluginHooks,
     load_plugin,
@@ -48,6 +41,8 @@ from directo.platform.plugins import (
     reset_plugins,
     unload_plugin,
 )
+
+
 def gui_main(*args, **kwargs):
     from directo.platform.gui import main
     return main(*args, **kwargs)
@@ -57,18 +52,35 @@ def gui_run(*args, **kwargs):
     return run(*args, **kwargs)
 
 __all__ = [
-    # migrations
-    "Migration", "MigrationError", "MigrationManager",
-    "register_migrations", "list_registered_migrations",
-    # backup
-    "BackupManager", "BackupResult", "MultiBackup",
-    # cache
-    "CacheLayer", "ImageCache", "PromptCache",
     # events
-    "AsyncListener", "Event", "EventBus", "EventKind", "Webhook", "WebhookManager",
+    "AsyncListener",
+    # backup
+    "BackupManager",
+    "BackupResult",
+    # cache
+    "CacheLayer",
+    "Event",
+    "EventBus",
+    "EventKind",
+    "ImageCache",
+    # migrations
+    "Migration",
+    "MigrationError",
+    "MigrationManager",
+    "MultiBackup",
     # plugins
-    "PluginHooks", "load_plugin", "loaded_plugins", "noop_register",
-    "reset_plugins", "unload_plugin",
+    "PluginHooks",
+    "PromptCache",
+    "Webhook",
+    "WebhookManager",
     # gui
-    "gui_main", "gui_run",
+    "gui_main",
+    "gui_run",
+    "list_registered_migrations",
+    "load_plugin",
+    "loaded_plugins",
+    "noop_register",
+    "register_migrations",
+    "reset_plugins",
+    "unload_plugin",
 ]

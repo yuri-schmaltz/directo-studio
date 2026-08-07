@@ -7,11 +7,11 @@ Covers 4 Tiers:
 - Tier 4: Real-World Scenario (complex cinematic sci-fi scene generation)
 """
 
-from dataclasses import dataclass, field
-from pathlib import Path
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -37,17 +37,17 @@ except ImportError:
     class LoRAConfig:
         name: str
         weight: float = 1.0
-        trigger_words: List[str] = field(default_factory=list)
+        trigger_words: list[str] = field(default_factory=list)
 
     @dataclass
     class CharacterProfile:
         id: str
         name: str = ""
         base_prompt: str = ""
-        visual_anchors: List[str] = field(default_factory=list)
-        loras: List[LoRAConfig] = field(default_factory=list)
-        seeds: Dict[str, Any] = field(default_factory=dict)
-        reference_images: List[str] = field(default_factory=list)
+        visual_anchors: list[str] = field(default_factory=list)
+        loras: list[LoRAConfig] = field(default_factory=list)
+        seeds: dict[str, Any] = field(default_factory=dict)
+        reference_images: list[str] = field(default_factory=list)
         negative_prompt: str = ""
 
     @dataclass
@@ -57,7 +57,7 @@ except ImportError:
         scenario_prompt: str = ""
         lighting: str = ""
         color_palette: str = ""
-        style_tokens: List[str] = field(default_factory=list)
+        style_tokens: list[str] = field(default_factory=list)
         negative_prompt: str = ""
 
     @dataclass
@@ -68,24 +68,24 @@ except ImportError:
         global_prompt_suffix: str = ""
         negative_prompt: str = ""
         aspect_ratio: str = "16:9"
-        audio_voice_filters: Dict[str, Any] = field(default_factory=dict)
-        directive_seed: Optional[int] = None
+        audio_voice_filters: dict[str, Any] = field(default_factory=dict)
+        directive_seed: int | None = None
 
     @dataclass
     class StyleBible:
         id: str
         name: str
         version: str = "1.0"
-        characters: Dict[str, CharacterProfile] = field(default_factory=dict)
-        environments: Dict[str, EnvironmentAnchor] = field(default_factory=dict)
-        directives: Dict[str, StyleDirective] = field(default_factory=dict)
+        characters: dict[str, CharacterProfile] = field(default_factory=dict)
+        environments: dict[str, EnvironmentAnchor] = field(default_factory=dict)
+        directives: dict[str, StyleDirective] = field(default_factory=dict)
 
     @dataclass
     class PromptResult:
         positive_prompt: str
         negative_prompt: str
-        lora_settings: List[Dict[str, Any]] = field(default_factory=list)
-        seed_settings: Dict[str, Any] = field(default_factory=dict)
+        lora_settings: list[dict[str, Any]] = field(default_factory=list)
+        seed_settings: dict[str, Any] = field(default_factory=dict)
 
     def _normalize_prompt_string(text: str) -> str:
         if not text:
@@ -102,15 +102,15 @@ except ImportError:
 
         def build_prompt(
             self,
-            character_ids: Optional[List[str]] = None,
-            environment_id: Optional[str] = None,
-            directive_id: Optional[str] = None,
+            character_ids: list[str] | None = None,
+            environment_id: str | None = None,
+            directive_id: str | None = None,
             action_prompt: str = "",
         ) -> PromptResult:
             pos_parts = []
             neg_parts = []
-            loras: List[Dict[str, Any]] = []
-            seed_settings: Dict[str, Any] = {"characters": {}}
+            loras: list[dict[str, Any]] = []
+            seed_settings: dict[str, Any] = {"characters": {}}
 
             directive = None
             if directive_id:

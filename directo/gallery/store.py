@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import threading
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Self
 
 from directo.gallery.models import ColorTag, ImageRecord
 from directo.observability import MetricsCollector, get_logger
@@ -418,10 +418,10 @@ class Gallery:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "Gallery":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
 

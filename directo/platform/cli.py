@@ -35,7 +35,7 @@ except ImportError:
     click = None  # type: ignore
 
 from directo.observability import configure_logging, get_logger
-from directo.platform.migrations import MigrationManager, list_registered_migrations
+from directo.platform.migrations import MigrationManager
 
 log = get_logger("directo.platform.cli")
 
@@ -67,7 +67,7 @@ def _cinema():
 
 
 def _bus(db_dir: Path):
-    from directo.platform.events import EventBus
+    pass
 # =====================================================================
 # CLI
 # =====================================================================
@@ -301,7 +301,6 @@ def build_cli():
     @click.pass_context
     def migrate(ctx: click.Context, module: str) -> None:
         """Run pending schema migrations for a module."""
-        from directo.platform.migrations import MigrationManager
         db_dir: Path = ctx.obj["db_dir"]
         # Convention: migration DB lives next to the module's DB
         db_path = db_dir / f"{module}.db"
@@ -336,8 +335,9 @@ def build_cli():
     def worker(ctx: click.Context, worker_id: str | None, node: str | None, poll_interval: float) -> None:
         """Run a standalone background queue worker."""
         import asyncio
-        from directo.queue import PersistentQueue, Worker
+
         from directo.observability import configure_logging
+        from directo.queue import PersistentQueue, Worker
         configure_logging(level="INFO", json_output=False)
 
         db_dir: Path = ctx.obj["db_dir"]
@@ -352,7 +352,10 @@ def build_cli():
         async def handle_animatic_generate(job):
             click.echo(f"Processing animatic generation job {job.id}")
             from directo.director.animatic import (
-                AnimaticProject, AnimaticClip, AnimaticBuilder, AIVideoBackend
+                AIVideoBackend,
+                AnimaticBuilder,
+                AnimaticClip,
+                AnimaticProject,
             )
             payload = job.payload
             clips = [

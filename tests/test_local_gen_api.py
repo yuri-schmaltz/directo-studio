@@ -12,18 +12,18 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 from fastapi import (
+    Body,
     FastAPI,
     HTTPException,
+    Query,
+    Response,
     WebSocket,
     WebSocketDisconnect,
     status,
-    Body,
-    Query,
-    Response,
 )
 from fastapi.testclient import TestClient
 
@@ -36,11 +36,11 @@ except ImportError:
 # Dynamic import for StyleBible model/store if available
 try:
     from directo.style_bible.models import (
-        StyleBible,
         CharacterProfile,
         EnvironmentAnchor,
-        StyleDirective,
         LoRAConfig,
+        StyleBible,
+        StyleDirective,
     )
     HAS_STYLE_BIBLE_MODULE = True
 except ImportError:
@@ -60,20 +60,20 @@ def ensure_api_routes(app: FastAPI) -> None:
     if not hasattr(app.state, "media_jobs_db"):
         app.state.media_jobs_db = {}
 
-    style_bibles_db: Dict[str, Dict[str, Any]] = app.state.style_bibles_db
-    media_jobs_db: Dict[str, Dict[str, Any]] = app.state.media_jobs_db
+    style_bibles_db: dict[str, dict[str, Any]] = app.state.style_bibles_db
+    media_jobs_db: dict[str, dict[str, Any]] = app.state.media_jobs_db
 
     if "/api/style-bibles" not in existing_paths:
 
         @app.get("/api/style-bibles")
         def list_style_bibles(
             limit: int = 100, offset: int = 0
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             items = list(style_bibles_db.values())[offset : offset + limit]
             return {"items": items, "count": len(style_bibles_db)}
 
         @app.post("/api/style-bibles", status_code=201)
-        def create_style_bible(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        def create_style_bible(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
             if not isinstance(payload, dict):
                 raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Body must be JSON object")
             sb_id = payload.get("id")
@@ -106,13 +106,13 @@ def ensure_api_routes(app: FastAPI) -> None:
             return sb_dict
 
         @app.get("/api/style-bibles/{sb_id}")
-        def get_style_bible(sb_id: str) -> Dict[str, Any]:
+        def get_style_bible(sb_id: str) -> dict[str, Any]:
             if sb_id not in style_bibles_db:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, f"Style Bible '{sb_id}' not found")
             return style_bibles_db[sb_id]
 
         @app.put("/api/style-bibles/{sb_id}")
-        def update_style_bible(sb_id: str, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        def update_style_bible(sb_id: str, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
             if sb_id not in style_bibles_db:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, f"Style Bible '{sb_id}' not found")
             if not isinstance(payload, dict):
@@ -125,14 +125,14 @@ def ensure_api_routes(app: FastAPI) -> None:
             return existing
 
         @app.delete("/api/style-bibles/{sb_id}")
-        def delete_style_bible(sb_id: str) -> Dict[str, Any]:
+        def delete_style_bible(sb_id: str) -> dict[str, Any]:
             if sb_id not in style_bibles_db:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, f"Style Bible '{sb_id}' not found")
             del style_bibles_db[sb_id]
             return {"deleted": True, "id": sb_id}
 
         @app.post("/api/style-bibles/import", status_code=201)
-        def import_style_bible(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        def import_style_bible(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
             if not isinstance(payload, dict):
                 raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Body must be JSON object")
             raw_content = payload.get("content")
@@ -179,7 +179,7 @@ def ensure_api_routes(app: FastAPI) -> None:
     if "/api/media-hub/generate" not in existing_paths:
 
         @app.post("/api/media-hub/generate", status_code=202)
-        def media_hub_generate(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+        def media_hub_generate(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
             if not isinstance(payload, dict):
                 raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Body must be JSON object")
             prompt = payload.get("prompt")
@@ -209,7 +209,7 @@ def ensure_api_routes(app: FastAPI) -> None:
             return {"job_id": job_id, "status": "pending", "message": "Media generation job enqueued"}
 
         @app.get("/api/media-hub/jobs/{job_id}")
-        def media_hub_get_job(job_id: str) -> Dict[str, Any]:
+        def media_hub_get_job(job_id: str) -> dict[str, Any]:
             if job_id not in media_jobs_db:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{job_id}' not found")
             return media_jobs_db[job_id]
@@ -283,7 +283,7 @@ def client(app: FastAPI) -> TestClient:
 
 
 @pytest.fixture
-def sample_style_bible() -> Dict[str, Any]:
+def sample_style_bible() -> dict[str, Any]:
     """Sample Style Bible payload matching TypeScript interface definitions."""
     return {
         "id": "sb-cyberpunk-01",
@@ -329,7 +329,7 @@ def sample_style_bible() -> Dict[str, Any]:
 # =====================================================================
 
 
-def test_tier1_style_bible_rest_crud(client: TestClient, sample_style_bible: Dict[str, Any]):
+def test_tier1_style_bible_rest_crud(client: TestClient, sample_style_bible: dict[str, Any]):
     """Tier 1: REST GET/POST/PUT/DELETE /api/style-bibles endpoints."""
     # 1. Create Style Bible (POST)
     res_create = client.post("/api/style-bibles", json=sample_style_bible)
@@ -367,7 +367,7 @@ def test_tier1_style_bible_rest_crud(client: TestClient, sample_style_bible: Dic
     assert res_get_deleted.status_code == 404
 
 
-def test_tier1_style_bible_import_export(client: TestClient, sample_style_bible: Dict[str, Any]):
+def test_tier1_style_bible_import_export(client: TestClient, sample_style_bible: dict[str, Any]):
     """Tier 1: REST POST /api/style-bibles/import and GET /api/style-bibles/{id}/export."""
     # 1. Create base style bible
     client.post("/api/style-bibles", json=sample_style_bible)
@@ -405,7 +405,7 @@ def test_tier1_style_bible_import_export(client: TestClient, sample_style_bible:
     assert res_get_imp.json()["name"] == "Imported SciFi Bible"
 
 
-def test_tier1_media_hub_generate_trigger(client: TestClient, sample_style_bible: Dict[str, Any]):
+def test_tier1_media_hub_generate_trigger(client: TestClient, sample_style_bible: dict[str, Any]):
     """Tier 1: REST POST /api/media-hub/generate trigger endpoint."""
     # Create style bible first
     client.post("/api/style-bibles", json=sample_style_bible)
@@ -587,7 +587,7 @@ def test_tier2_empty_import_payload(client: TestClient):
 # =====================================================================
 
 
-def test_tier3_client_api_flow(client: TestClient, sample_style_bible: Dict[str, Any]):
+def test_tier3_client_api_flow(client: TestClient, sample_style_bible: dict[str, Any]):
     """Tier 3: Client API flow: POST Style Bible -> GET Style Bible -> POST Media Hub Generation -> GET Job Status -> WebSocket stream."""
     # Step 1: POST Style Bible
     res_create = client.post("/api/style-bibles", json=sample_style_bible)
@@ -629,7 +629,7 @@ def test_tier3_client_api_flow(client: TestClient, sample_style_bible: Dict[str,
         assert "job_completed" in event_names
 
 
-def test_tier3_media_gen_with_updated_style_bible(client: TestClient, sample_style_bible: Dict[str, Any]):
+def test_tier3_media_gen_with_updated_style_bible(client: TestClient, sample_style_bible: dict[str, Any]):
     """Tier 3: Generation payload tracking updated Style Bible directives."""
     # 1. Create SB
     client.post("/api/style-bibles", json=sample_style_bible)

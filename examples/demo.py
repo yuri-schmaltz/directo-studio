@@ -12,8 +12,6 @@ Run it:
 from __future__ import annotations
 
 import asyncio
-import io
-import os
 import random
 import sys
 import tempfile

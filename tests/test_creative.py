@@ -1,7 +1,6 @@
 """Tests for the creative primitives (Phase 1)."""
 
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,6 @@ from directo.creative import (
     GalleryView,
     GenerationStrategy,
     ImageHistory,
-    Reference,
     ReferenceKind,
     ReferenceLibrary,
     Variant,
@@ -22,10 +20,9 @@ from directo.creative import (
     VariantStore,
     ViewLayout,
 )
+from directo.creative.references import PillowBackend
 from directo.creative.variants import plan_seeds
 from directo.gallery import Gallery, ImageRecord
-from directo.creative.references import PillowBackend
-
 
 # ============================================================
 # Variants

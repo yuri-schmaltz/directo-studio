@@ -10,7 +10,8 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+
 import yaml
 
 
@@ -54,7 +55,7 @@ class LoRAConfig:
     name: str
     path: str = ""
     weight: float = 1.0
-    trigger_words: List[str] = field(default_factory=list)
+    trigger_words: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not isinstance(self.name, str) or not self.name.strip():
@@ -64,7 +65,7 @@ class LoRAConfig:
         except (ValueError, TypeError):
             raise ValueError(f"Invalid LoRA weight: {self.weight}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "path": self.path,
@@ -73,7 +74,7 @@ class LoRAConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> LoRAConfig:
+    def from_dict(cls, data: dict[str, Any]) -> LoRAConfig:
         if not isinstance(data, dict):
             raise ValueError("Data for LoRAConfig must be a dictionary.")
         name = data.get("name")
@@ -97,10 +98,10 @@ class CharacterProfile:
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     name: str = ""
     base_prompt: str = ""
-    visual_anchors: List[str] = field(default_factory=list)
-    loras: List[LoRAConfig] = field(default_factory=list)
-    seeds: Dict[str, Any] = field(default_factory=dict)
-    reference_images: List[str] = field(default_factory=list)
+    visual_anchors: list[str] = field(default_factory=list)
+    loras: list[LoRAConfig] = field(default_factory=list)
+    seeds: dict[str, Any] = field(default_factory=dict)
+    reference_images: list[str] = field(default_factory=list)
     negative_prompt: str = ""
 
     def __post_init__(self) -> None:
@@ -116,7 +117,7 @@ class CharacterProfile:
                 )
             lora_names.add(lname)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -129,14 +130,14 @@ class CharacterProfile:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> CharacterProfile:
+    def from_dict(cls, data: dict[str, Any]) -> CharacterProfile:
         if not isinstance(data, dict):
             raise ValueError("Data for CharacterProfile must be a dictionary.")
         if "id" in data and not str(data["id"]).strip():
             raise ValueError("CharacterProfile missing or empty required field 'id'.")
 
         loras_raw = data.get("loras", [])
-        loras_parsed: List[LoRAConfig] = []
+        loras_parsed: list[LoRAConfig] = []
         if loras_raw:
             for l in loras_raw:
                 if isinstance(l, LoRAConfig):
@@ -175,14 +176,14 @@ class EnvironmentAnchor:
     scenario_prompt: str = ""
     lighting: str = ""
     color_palette: Any = ""
-    style_tokens: List[str] = field(default_factory=list)
+    style_tokens: list[str] = field(default_factory=list)
     negative_prompt: str = ""
 
     def __post_init__(self) -> None:
         if not isinstance(self.id, str) or not self.id.strip():
             raise ValueError("EnvironmentAnchor ID must be a non-empty string.")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         palette = (
             list(self.color_palette)
             if isinstance(self.color_palette, (list, tuple))
@@ -199,7 +200,7 @@ class EnvironmentAnchor:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> EnvironmentAnchor:
+    def from_dict(cls, data: dict[str, Any]) -> EnvironmentAnchor:
         if not isinstance(data, dict):
             raise ValueError("Data for EnvironmentAnchor must be a dictionary.")
         if "id" in data and not str(data["id"]).strip():
@@ -240,15 +241,15 @@ class StyleDirective:
     global_prompt_suffix: str = ""
     negative_prompt: str = ""
     aspect_ratio: str = "16:9"
-    audio_voice_filters: Dict[str, Any] = field(default_factory=dict)
-    directive_seed: Optional[int] = None
+    audio_voice_filters: dict[str, Any] = field(default_factory=dict)
+    directive_seed: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.id, str) or not self.id.strip():
             raise ValueError("StyleDirective ID must be a non-empty string.")
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
             "id": self.id,
             "name": self.name,
             "global_prompt_prefix": self.global_prompt_prefix,
@@ -262,7 +263,7 @@ class StyleDirective:
         return d
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> StyleDirective:
+    def from_dict(cls, data: dict[str, Any]) -> StyleDirective:
         if not isinstance(data, dict):
             raise ValueError("Data for StyleDirective must be a dictionary.")
         if "id" in data and not str(data["id"]).strip():
@@ -315,7 +316,7 @@ class StyleBible:
             self.characters = _to_style_dict(self.characters)
         self.characters[character.id] = character
 
-    def get_character(self, character_id: str) -> Optional[CharacterProfile]:
+    def get_character(self, character_id: str) -> CharacterProfile | None:
         if isinstance(self.characters, StyleDict):
             return self.characters.get(character_id)
         if isinstance(self.characters, dict):
@@ -331,7 +332,7 @@ class StyleBible:
             self.environments = _to_style_dict(self.environments)
         self.environments[environment.id] = environment
 
-    def get_environment(self, environment_id: str) -> Optional[EnvironmentAnchor]:
+    def get_environment(self, environment_id: str) -> EnvironmentAnchor | None:
         if isinstance(self.environments, StyleDict):
             return self.environments.get(environment_id)
         if isinstance(self.environments, dict):
@@ -347,7 +348,7 @@ class StyleBible:
             self.directives = _to_style_dict(self.directives)
         self.directives[directive.id] = directive
 
-    def get_directive(self, directive_id: str) -> Optional[StyleDirective]:
+    def get_directive(self, directive_id: str) -> StyleDirective | None:
         if isinstance(self.directives, StyleDict):
             return self.directives.get(directive_id)
         if isinstance(self.directives, dict):
@@ -358,7 +359,7 @@ class StyleBible:
                     return d
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -375,7 +376,7 @@ class StyleBible:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> StyleBible:
+    def from_dict(cls, data: dict[str, Any]) -> StyleBible:
         if not isinstance(data, dict):
             raise ValueError("Data for StyleBible must be a dictionary.")
         if not data.get("id") or not str(data.get("id")).strip():
@@ -447,7 +448,7 @@ class StyleBible:
             directives=parsed_dirs,
         )
 
-    def to_json(self, indent: Optional[int] = 2) -> str:
+    def to_json(self, indent: int | None = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
 
     @classmethod

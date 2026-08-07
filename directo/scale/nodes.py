@@ -130,9 +130,12 @@ class ComfyUINode:
             return False, f"missing tags: {required_tags - set(self.tags)}"
         # VRAM check
         req_vram = requirements.get("vram_mb")
-        if req_vram and self.health.vram_free_mb is not None:
-            if self.health.vram_free_mb < req_vram:
-                return False, f"insufficient VRAM: need {req_vram}MB, have {self.health.vram_free_mb}MB"
+        if (
+            req_vram
+            and self.health.vram_free_mb is not None
+            and self.health.vram_free_mb < req_vram
+        ):
+            return False, f"insufficient VRAM: need {req_vram}MB, have {self.health.vram_free_mb}MB"
         return True, None
 
 
@@ -188,7 +191,7 @@ class NodeRegistry:
         ]
 
     @classmethod
-    def from_json(cls, data: list[dict[str, Any]]) -> "NodeRegistry":
+    def from_json(cls, data: list[dict[str, Any]]) -> NodeRegistry:
         reg = cls()
         for d in data:
             reg.add(ComfyUINode(

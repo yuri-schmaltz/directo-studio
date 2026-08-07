@@ -22,7 +22,7 @@ import os
 import sqlite3
 import threading
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Self
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
@@ -113,7 +113,7 @@ class CredentialVault:
     # ----------------- Factories -----------------
 
     @classmethod
-    def from_passphrase(cls, passphrase: str, db_path: str | Path = ":memory:") -> "CredentialVault":
+    def from_passphrase(cls, passphrase: str, db_path: str | Path = ":memory:") -> CredentialVault:
         """Open or initialize a vault from a passphrase.
 
         The salt is persisted in the database on first use and reused
@@ -136,7 +136,7 @@ class CredentialVault:
         return vault
 
     @classmethod
-    def from_env(cls, env_var: str = "MAESTRO_VAULT_KEY", db_path: str | Path = ":memory:") -> "CredentialVault":
+    def from_env(cls, env_var: str = "MAESTRO_VAULT_KEY", db_path: str | Path = ":memory:") -> CredentialVault:
         """Open a vault using a base64url-encoded key from an env var.
 
         Useful in containerized deployments where the key is supplied
@@ -287,7 +287,7 @@ class CredentialVault:
 
             self._fernet = new_fernet
             self._audit("rotate", None, True)
-            log.info("vault key rotated; {} credentials re-encrypted", len(reencrypted))
+            log.info("vault key rotated; {} credentials re-encrypted", len(reencrypted))  # noqa: PLE1205  (loguru uses {} not %)
 
     # ----------------- Audit -----------------
 
@@ -315,8 +315,8 @@ class CredentialVault:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "CredentialVault":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()

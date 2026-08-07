@@ -1,7 +1,7 @@
 """Base classes and protocols for TTS drivers."""
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Protocol
 
 
 @dataclass
@@ -12,7 +12,7 @@ class SpeechResult:
     character_id: str = ""
     engine: str = "mock"
     status: str = "completed"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class TTSDriver(Protocol):
@@ -20,6 +20,6 @@ class TTSDriver(Protocol):
         self,
         text: str,
         character_id: str = "",
-        voice_settings: Optional[Dict[str, Any]] = None,
+        voice_settings: dict[str, Any] | None = None,
     ) -> SpeechResult:
         ...

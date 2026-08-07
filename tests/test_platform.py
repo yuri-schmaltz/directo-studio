@@ -1,7 +1,5 @@
 """Tests for the platform module (Phase 5)."""
 
-import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -24,13 +22,12 @@ from directo.platform import (
     PromptCache,
     WebhookManager,
     load_plugin,
+    loaded_plugins,
     noop_register,
     register_migrations,
     reset_plugins,
     unload_plugin,
-    loaded_plugins,
 )
-
 
 # ============================================================
 # Migrations
@@ -105,7 +102,7 @@ def test_backup_compress_and_prune(tmp_path):
     mgr = BackupManager(src)
     # Make 3 backups (each timestamped uniquely)
     for i in range(3):
-        b = mgr.backup(tmp_path, compress=True, timestamped=True)
+        mgr.backup(tmp_path, compress=True, timestamped=True)
         _time.sleep(0.01)
     backups = mgr.list_backups(tmp_path)
     # Filter to actual backup files (exclude source db)
@@ -349,8 +346,8 @@ def test_unload_plugin():
 
 def test_plugin_via_dotted_path(tmp_path, monkeypatch):
     """Load a plugin by module name (writes a tiny module to tmp)."""
-    import sys
     import importlib.util
+    import sys
     p = tmp_path / "my_plugin.py"
     p.write_text("def register(hooks):\n    hooks.set_custom('from_module', 'yes')\n")
     spec = importlib.util.spec_from_file_location("test_my_plugin", p)
@@ -470,6 +467,7 @@ def api_client(tmp_path):
     pytest.importorskip("fastapi")
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
+
     from directo.platform.api import create_app
     app = create_app(db_dir=tmp_path)
     return TestClient(app)

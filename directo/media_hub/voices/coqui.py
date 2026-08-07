@@ -1,6 +1,7 @@
 """Coqui TTS Driver implementation."""
 
-from typing import Any, Dict, Optional
+from typing import Any
+
 from directo.media_hub.voices.base import SpeechResult
 
 
@@ -15,7 +16,7 @@ class CoquiTTSDriver:
         self,
         text: str,
         character_id: str = "",
-        voice_settings: Optional[Dict[str, Any]] = None,
+        voice_settings: dict[str, Any] | None = None,
     ) -> SpeechResult:
         if not text or not text.strip():
             raise ValueError("Text string for Coqui speech synthesis cannot be empty.")

@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from directo.observability import get_logger
-from directo.scale.enhance import PromptEnhancer, TargetModel
 
 log = get_logger("directo.director.backends")
 

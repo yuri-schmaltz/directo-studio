@@ -9,10 +9,11 @@ from __future__ import annotations
 import re
 import time
 import uuid
+from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from directo.observability import get_logger
 
@@ -145,7 +146,7 @@ def parse_fountain(text: str) -> list[Scene]:
         header_buffer = []
         action_text = "\n".join(action_lines).strip()
 
-        filtered_chars = sorted(list({_clean_character_name(c) for c in current_chars if _clean_character_name(c)}))
+        filtered_chars = sorted({_clean_character_name(c) for c in current_chars if _clean_character_name(c)})
 
         scenes.append(Scene(
             id=uuid.uuid4().hex[:12],

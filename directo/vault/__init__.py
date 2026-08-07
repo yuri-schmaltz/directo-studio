@@ -23,6 +23,6 @@ Usage:
     >>> vault.rotate_key("new-passphrase")
 """
 
-from directo.vault.credentials import CredentialVault, CredentialNotFound
+from directo.vault.credentials import CredentialNotFound, CredentialVault
 
-__all__ = ["CredentialVault", "CredentialNotFound"]
+__all__ = ["CredentialNotFound", "CredentialVault"]

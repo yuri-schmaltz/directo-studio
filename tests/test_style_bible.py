@@ -7,26 +7,27 @@ Covers 4 Tiers of testing:
 - Tier 4: Real-World Scenario (End-to-end multi-character lifecycle)
 """
 
+import builtins
 import json
 import os
-from pathlib import Path
 import sqlite3
+
 import pytest
 import yaml
 
 # Task 3: Graceful dynamic imports from directo.style_bible or fallback implementations
 try:
     from directo.style_bible.models import (
-        LoRAConfig,
         CharacterProfile,
         EnvironmentAnchor,
-        StyleDirective,
+        LoRAConfig,
         StyleBible,
+        StyleDirective,
     )
     from directo.style_bible.store import StyleBibleStore
 except (ImportError, ModuleNotFoundError):
-    from dataclasses import dataclass, field, asdict
-    from typing import Any, Dict, List, Optional
+    from dataclasses import dataclass, field
+    from typing import Any
 
     @dataclass
     class LoRAConfig:
@@ -39,11 +40,11 @@ except (ImportError, ModuleNotFoundError):
                 raise ValueError("LoRA name must be a non-empty string.")
             self.weight = float(self.weight)
 
-        def to_dict(self) -> Dict[str, Any]:
+        def to_dict(self) -> dict[str, Any]:
             return {"name": self.name, "path": self.path, "weight": float(self.weight)}
 
         @classmethod
-        def from_dict(cls, data: Dict[str, Any]) -> "LoRAConfig":
+        def from_dict(cls, data: dict[str, Any]) -> "LoRAConfig":
             if not isinstance(data, dict):
                 raise ValueError("Data for LoRAConfig must be a dictionary.")
             name = data.get("name")
@@ -60,10 +61,10 @@ except (ImportError, ModuleNotFoundError):
         id: str
         name: str
         base_prompt: str = ""
-        visual_anchors: List[str] = field(default_factory=list)
-        loras: List[LoRAConfig] = field(default_factory=list)
-        seeds: Dict[str, int] = field(default_factory=dict)
-        reference_images: List[str] = field(default_factory=list)
+        visual_anchors: list[str] = field(default_factory=list)
+        loras: list[LoRAConfig] = field(default_factory=list)
+        seeds: dict[str, int] = field(default_factory=dict)
+        reference_images: list[str] = field(default_factory=list)
 
         def __post_init__(self):
             if not isinstance(self.id, str) or not self.id.strip():
@@ -78,7 +79,7 @@ except (ImportError, ModuleNotFoundError):
                     raise ValueError(f"Duplicate LoRA name detected in character profile '{self.name}': '{lname}'")
                 lora_names.add(lname)
 
-        def to_dict(self) -> Dict[str, Any]:
+        def to_dict(self) -> dict[str, Any]:
             return {
                 "id": self.id,
                 "name": self.name,
@@ -90,7 +91,7 @@ except (ImportError, ModuleNotFoundError):
             }
 
         @classmethod
-        def from_dict(cls, data: Dict[str, Any]) -> "CharacterProfile":
+        def from_dict(cls, data: dict[str, Any]) -> "CharacterProfile":
             if not isinstance(data, dict):
                 raise ValueError("Data for CharacterProfile must be a dictionary.")
             if not data.get("id") or not str(data.get("id")).strip():
@@ -124,8 +125,8 @@ except (ImportError, ModuleNotFoundError):
         name: str
         scenario_prompt: str = ""
         lighting: str = ""
-        color_palette: List[str] = field(default_factory=list)
-        style_tokens: List[str] = field(default_factory=list)
+        color_palette: list[str] = field(default_factory=list)
+        style_tokens: list[str] = field(default_factory=list)
 
         def __post_init__(self):
             if not isinstance(self.id, str) or not self.id.strip():
@@ -133,7 +134,7 @@ except (ImportError, ModuleNotFoundError):
             if not isinstance(self.name, str) or not self.name.strip():
                 raise ValueError("EnvironmentAnchor Name must be a non-empty string.")
 
-        def to_dict(self) -> Dict[str, Any]:
+        def to_dict(self) -> dict[str, Any]:
             return {
                 "id": self.id,
                 "name": self.name,
@@ -144,7 +145,7 @@ except (ImportError, ModuleNotFoundError):
             }
 
         @classmethod
-        def from_dict(cls, data: Dict[str, Any]) -> "EnvironmentAnchor":
+        def from_dict(cls, data: dict[str, Any]) -> "EnvironmentAnchor":
             if not isinstance(data, dict):
                 raise ValueError("Data for EnvironmentAnchor must be a dictionary.")
             if not data.get("id") or not str(data.get("id")).strip():
@@ -169,7 +170,7 @@ except (ImportError, ModuleNotFoundError):
         global_prompt_suffix: str = ""
         negative_prompt: str = ""
         aspect_ratio: str = "16:9"
-        audio_voice_filters: Dict[str, Any] = field(default_factory=dict)
+        audio_voice_filters: dict[str, Any] = field(default_factory=dict)
 
         def __post_init__(self):
             if not isinstance(self.id, str) or not self.id.strip():
@@ -177,7 +178,7 @@ except (ImportError, ModuleNotFoundError):
             if not isinstance(self.name, str) or not self.name.strip():
                 raise ValueError("StyleDirective Name must be a non-empty string.")
 
-        def to_dict(self) -> Dict[str, Any]:
+        def to_dict(self) -> dict[str, Any]:
             return {
                 "id": self.id,
                 "name": self.name,
@@ -189,7 +190,7 @@ except (ImportError, ModuleNotFoundError):
             }
 
         @classmethod
-        def from_dict(cls, data: Dict[str, Any]) -> "StyleDirective":
+        def from_dict(cls, data: dict[str, Any]) -> "StyleDirective":
             if not isinstance(data, dict):
                 raise ValueError("Data for StyleDirective must be a dictionary.")
             if not data.get("id") or not str(data.get("id")).strip():
@@ -212,9 +213,9 @@ except (ImportError, ModuleNotFoundError):
         id: str
         name: str
         version: str = "1.0.0"
-        characters: List[CharacterProfile] = field(default_factory=list)
-        environments: List[EnvironmentAnchor] = field(default_factory=list)
-        directives: List[StyleDirective] = field(default_factory=list)
+        characters: list[CharacterProfile] = field(default_factory=list)
+        environments: list[EnvironmentAnchor] = field(default_factory=list)
+        directives: list[StyleDirective] = field(default_factory=list)
 
         def __post_init__(self):
             if not isinstance(self.id, str) or not self.id.strip():
@@ -222,25 +223,25 @@ except (ImportError, ModuleNotFoundError):
             if not isinstance(self.name, str) or not self.name.strip():
                 raise ValueError("StyleBible Name must be a non-empty string.")
 
-        def get_character(self, char_id: str) -> Optional[CharacterProfile]:
+        def get_character(self, char_id: str) -> CharacterProfile | None:
             for c in self.characters:
                 if c.id == char_id:
                     return c
             return None
 
-        def get_environment(self, env_id: str) -> Optional[EnvironmentAnchor]:
+        def get_environment(self, env_id: str) -> EnvironmentAnchor | None:
             for e in self.environments:
                 if e.id == env_id:
                     return e
             return None
 
-        def get_directive(self, dir_id: str) -> Optional[StyleDirective]:
+        def get_directive(self, dir_id: str) -> StyleDirective | None:
             for d in self.directives:
                 if d.id == dir_id:
                     return d
             return None
 
-        def to_dict(self) -> Dict[str, Any]:
+        def to_dict(self) -> dict[str, Any]:
             return {
                 "id": self.id,
                 "name": self.name,
@@ -251,7 +252,7 @@ except (ImportError, ModuleNotFoundError):
             }
 
         @classmethod
-        def from_dict(cls, data: Dict[str, Any]) -> "StyleBible":
+        def from_dict(cls, data: dict[str, Any]) -> "StyleBible":
             if not isinstance(data, dict):
                 raise ValueError("Data for StyleBible must be a dictionary.")
             if not data.get("id") or not str(data.get("id")).strip():
@@ -359,13 +360,13 @@ except (ImportError, ModuleNotFoundError):
                 raise KeyError(f"StyleBible with ID '{bible_id}' not found.")
             return StyleBible.from_json(row["data_json"])
 
-        def list(self) -> List[Dict[str, Any]]:
+        def list(self) -> list[dict[str, Any]]:
             cursor = self.conn.cursor()
             cursor.execute("SELECT id, name, version FROM style_bibles ORDER BY name ASC")
             rows = cursor.fetchall()
             return [{"id": row["id"], "name": row["name"], "version": row["version"]} for row in rows]
 
-        def search(self, query: str) -> List[StyleBible]:
+        def search(self, query: str) -> builtins.list[StyleBible]:
             if not isinstance(query, str) or not query.strip():
                 return []
 

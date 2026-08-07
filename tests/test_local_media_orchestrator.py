@@ -8,15 +8,13 @@ Covers 4 Tiers of testing:
 """
 
 import asyncio
-from dataclasses import dataclass, field
 import json
 import math
 import os
-from pathlib import Path
-import re
 import sys
-import urllib.error
-from typing import Any, Dict, List, Optional, Tuple, Protocol
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,17 +24,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Import from directo.media_hub or provide fallback reference implementations
 try:
-    from directo.media_hub.video.base import VideoDriver, VideoResult
-    from directo.media_hub.video.comfyui import ComfyUIVideoDriver, NodeRegistry, parse_aspect_ratio
-    from directo.media_hub.video.ffmpeg import FFmpegRenderer
-    from directo.media_hub.video.mock import MockVideoDriver
-
-    from directo.media_hub.voices.base import SpeechResult, TTSDriver
-    from directo.media_hub.voices.piper import PiperTTSDriver
-    from directo.media_hub.voices.bark import BarkTTSDriver
-    from directo.media_hub.voices.coqui import CoquiTTSDriver
-    from directo.media_hub.voices.mock import MockTTSDriver
-
+    from directo.media_hub.audio.ducking import AudioDuckingEngine
+    from directo.media_hub.audio.mixer import AudioMixer, MixedAudioResult
+    from directo.media_hub.orchestrator import (
+        LocalMediaOrchestrator,
+        OrchestrationRequest,
+        OrchestrationResult,
+    )
+    from directo.media_hub.subtitles.aligner import SubtitleAligner
     from directo.media_hub.subtitles.whisper import (
         SubtitleResult,
         SubtitleSegment,
@@ -44,16 +39,15 @@ try:
         format_srt_timestamp,
         format_vtt_timestamp,
     )
-    from directo.media_hub.subtitles.aligner import SubtitleAligner
-
-    from directo.media_hub.audio.ducking import AudioDuckingEngine
-    from directo.media_hub.audio.mixer import AudioMixer, MixedAudioResult
-
-    from directo.media_hub.orchestrator import (
-        LocalMediaOrchestrator,
-        OrchestrationRequest,
-        OrchestrationResult,
-    )
+    from directo.media_hub.video.base import VideoResult
+    from directo.media_hub.video.comfyui import ComfyUIVideoDriver, NodeRegistry, parse_aspect_ratio
+    from directo.media_hub.video.ffmpeg import FFmpegRenderer
+    from directo.media_hub.video.mock import MockVideoDriver
+    from directo.media_hub.voices.bark import BarkTTSDriver
+    from directo.media_hub.voices.base import SpeechResult
+    from directo.media_hub.voices.coqui import CoquiTTSDriver
+    from directo.media_hub.voices.mock import MockTTSDriver
+    from directo.media_hub.voices.piper import PiperTTSDriver
 except ImportError:
     # Fallback reference implementations for independent test execution
     @dataclass
@@ -64,9 +58,9 @@ except ImportError:
         height: int = 1080
         fps: int = 30
         status: str = "completed"
-        metadata: Dict[str, Any] = field(default_factory=dict)
+        metadata: dict[str, Any] = field(default_factory=dict)
 
-    def parse_aspect_ratio(aspect_ratio: str) -> Tuple[int, int]:
+    def parse_aspect_ratio(aspect_ratio: str) -> tuple[int, int]:
         if not isinstance(aspect_ratio, str) or not aspect_ratio.strip():
             raise ValueError(f"Invalid aspect ratio format: '{aspect_ratio}'")
         parts = aspect_ratio.strip().split(":")
@@ -92,35 +86,35 @@ except ImportError:
             return (base_w, base_h)
 
     class NodeRegistry:
-        def __init__(self, nodes: Optional[List[Dict[str, Any]]] = None) -> None:
+        def __init__(self, nodes: list[dict[str, Any]] | None = None) -> None:
             self.nodes = nodes or [
                 {"id": "node_primary", "host": "127.0.0.1", "port": 8188, "capabilities": ["txt2vid"], "status": "active"}
             ]
 
-        def pick(self, capability: str = "txt2vid") -> Dict[str, Any]:
+        def pick(self, capability: str = "txt2vid") -> dict[str, Any]:
             active = [n for n in self.nodes if n.get("status") == "active" and capability in n.get("capabilities", [])]
             if not active:
                 raise RuntimeError(f"No active node for capability '{capability}'")
             return active[0]
 
     class ComfyUIVideoDriver:
-        def __init__(self, host: str = "127.0.0.1", port: int = 8188, node_registry: Optional[NodeRegistry] = None, timeout: float = 30.0, offline_fallback: bool = False) -> None:
+        def __init__(self, host: str = "127.0.0.1", port: int = 8188, node_registry: NodeRegistry | None = None, timeout: float = 30.0, offline_fallback: bool = False) -> None:
             self.host = host
             self.port = port
             self.node_registry = node_registry or NodeRegistry()
             self.timeout = timeout
             self.offline_fallback = offline_fallback
 
-        def generate_video(self, prompt: str, loras: Optional[List[Dict[str, Any]]] = None, seed: int = 42, duration: float = 5.0, aspect_ratio: str = "16:9") -> VideoResult:
+        def generate_video(self, prompt: str, loras: list[dict[str, Any]] | None = None, seed: int = 42, duration: float = 5.0, aspect_ratio: str = "16:9") -> VideoResult:
             if duration <= 0:
                 raise ValueError(f"Video duration must be greater than 0, got {duration}")
             width, height = parse_aspect_ratio(aspect_ratio)
             try:
-                node = self.node_registry.pick("txt2vid")
-            except RuntimeError as e:
+                self.node_registry.pick("txt2vid")
+            except RuntimeError:
                 if self.offline_fallback:
                     return VideoResult(video_path="/tmp/comfyui_fallback.mp4", duration=duration, width=width, height=height, status="completed_fallback")
-                raise e
+                raise
             if self.offline_fallback and self.host == "invalid_host":
                 return VideoResult(video_path="/tmp/comfyui_offline.mp4", duration=duration, width=width, height=height, status="completed_offline")
             if not self.offline_fallback and (self.host == "invalid_host" or self.port == 99999):
@@ -131,7 +125,7 @@ except ImportError:
         def __init__(self, ffmpeg_bin: str = "ffmpeg") -> None:
             self.ffmpeg_bin = ffmpeg_bin
 
-        def build_command(self, raw_video: str, audio_track: Optional[str] = None, subtitles_srt: Optional[str] = None, aspect_ratio: str = "16:9", padding: bool = False, overlay_image: Optional[str] = None, crossfade_duration: float = 0.5, output_path: Optional[str] = None) -> List[str]:
+        def build_command(self, raw_video: str, audio_track: str | None = None, subtitles_srt: str | None = None, aspect_ratio: str = "16:9", padding: bool = False, overlay_image: str | None = None, crossfade_duration: float = 0.5, output_path: str | None = None) -> list[str]:
             w, h = parse_aspect_ratio(aspect_ratio)
             out_path = output_path or "/tmp/rendered.mp4"
             cmd = [self.ffmpeg_bin, "-y", "-i", raw_video]
@@ -154,7 +148,7 @@ except ImportError:
             cmd.extend(["-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "192k", out_path])
             return cmd
 
-        def render_video(self, raw_video: str, audio_track: Optional[str] = None, subtitles_srt: Optional[str] = None, aspect_ratio: str = "16:9", padding: bool = False, overlay_image: Optional[str] = None, crossfade_duration: float = 0.5, output_path: Optional[str] = None) -> str:
+        def render_video(self, raw_video: str, audio_track: str | None = None, subtitles_srt: str | None = None, aspect_ratio: str = "16:9", padding: bool = False, overlay_image: str | None = None, crossfade_duration: float = 0.5, output_path: str | None = None) -> str:
             cmd = self.build_command(raw_video, audio_track, subtitles_srt, aspect_ratio, padding, overlay_image, crossfade_duration, output_path)
             out_path = cmd[-1]
             os.makedirs(os.path.dirname(out_path) or "/tmp", exist_ok=True)
@@ -166,7 +160,7 @@ except ImportError:
         def __init__(self, output_dir: str = "/tmp") -> None:
             self.output_dir = output_dir
 
-        def generate_video(self, prompt: str, loras: Optional[List[Dict[str, Any]]] = None, seed: int = 42, duration: float = 5.0, aspect_ratio: str = "16:9") -> VideoResult:
+        def generate_video(self, prompt: str, loras: list[dict[str, Any]] | None = None, seed: int = 42, duration: float = 5.0, aspect_ratio: str = "16:9") -> VideoResult:
             if duration <= 0:
                 raise ValueError(f"Video duration must be greater than 0, got {duration}")
             w, h = parse_aspect_ratio(aspect_ratio)
@@ -181,14 +175,14 @@ except ImportError:
         character_id: str = ""
         engine: str = "mock"
         status: str = "completed"
-        metadata: Dict[str, Any] = field(default_factory=dict)
+        metadata: dict[str, Any] = field(default_factory=dict)
 
     class PiperTTSDriver:
         def __init__(self, model_path: str = "/models/piper.onnx", sample_rate: int = 22050) -> None:
             self.model_path = model_path
             self.sample_rate = sample_rate
 
-        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: Optional[Dict[str, Any]] = None) -> SpeechResult:
+        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: dict[str, Any] | None = None) -> SpeechResult:
             if not text or not text.strip():
                 raise ValueError("Text string for Piper speech synthesis cannot be empty.")
             speed = float((voice_settings or {}).get("speed", 1.0))
@@ -200,7 +194,7 @@ except ImportError:
             self.voice_preset = voice_preset
             self.sample_rate = sample_rate
 
-        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: Optional[Dict[str, Any]] = None) -> SpeechResult:
+        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: dict[str, Any] | None = None) -> SpeechResult:
             if not text or not text.strip():
                 raise ValueError("Text string for Bark speech synthesis cannot be empty.")
             preset = (voice_settings or {}).get("voice_preset", self.voice_preset)
@@ -212,7 +206,7 @@ except ImportError:
             self.model_name = model_name
             self.sample_rate = sample_rate
 
-        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: Optional[Dict[str, Any]] = None) -> SpeechResult:
+        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: dict[str, Any] | None = None) -> SpeechResult:
             if not text or not text.strip():
                 raise ValueError("Text string for Coqui speech synthesis cannot be empty.")
             lang = (voice_settings or {}).get("language", "en")
@@ -223,7 +217,7 @@ except ImportError:
         def __init__(self, sample_rate: int = 22050) -> None:
             self.sample_rate = sample_rate
 
-        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: Optional[Dict[str, Any]] = None) -> SpeechResult:
+        def synthesize_speech(self, text: str, character_id: str = "", voice_settings: dict[str, Any] | None = None) -> SpeechResult:
             if not text or not text.strip():
                 raise ValueError("Text string for Mock speech synthesis cannot be empty.")
             dur = max(0.5, len(text.strip()) * 0.08)
@@ -242,11 +236,11 @@ except ImportError:
         srt_path: str
         vtt_path: str
         json_path: str
-        segments: List[SubtitleSegment] = field(default_factory=list)
+        segments: list[SubtitleSegment] = field(default_factory=list)
         language: str = "en"
 
     def format_srt_timestamp(seconds: float) -> str:
-        millis = int(round((seconds - int(seconds)) * 1000))
+        millis = round((seconds - int(seconds)) * 1000)
         secs = int(seconds)
         mins = secs // 60
         secs = secs % 60
@@ -255,7 +249,7 @@ except ImportError:
         return f"{hours:02d}:{mins:02d}:{secs:02d},{millis:03d}"
 
     def format_vtt_timestamp(seconds: float) -> str:
-        millis = int(round((seconds - int(seconds)) * 1000))
+        millis = round((seconds - int(seconds)) * 1000)
         secs = int(seconds)
         mins = secs // 60
         secs = secs % 60
@@ -267,7 +261,7 @@ except ImportError:
         def __init__(self, model_size: str = "base", device: str = "cpu") -> None:
             self.model_size = model_size
 
-        def generate_subtitles(self, speech_audio_path: str, dialogue_events: Optional[List[Dict[str, Any]]] = None, language: str = "en", output_dir: str = "/tmp") -> SubtitleResult:
+        def generate_subtitles(self, speech_audio_path: str, dialogue_events: list[dict[str, Any]] | None = None, language: str = "en", output_dir: str = "/tmp") -> SubtitleResult:
             if not speech_audio_path or not isinstance(speech_audio_path, str):
                 raise ValueError("Speech audio path must be a valid non-empty string.")
             segments = []
@@ -299,7 +293,7 @@ except ImportError:
             return SubtitleResult(srt_path=srt_path, vtt_path=vtt_path, json_path=json_path, segments=segments, language=language)
 
     class SubtitleAligner:
-        def align_events(self, events: List[Dict[str, Any]]) -> List[SubtitleSegment]:
+        def align_events(self, events: list[dict[str, Any]]) -> list[SubtitleSegment]:
             aligned = []
             curr = 0.0
             for ev in events:
@@ -316,7 +310,7 @@ except ImportError:
             self.attack_ms = attack_ms
             self.release_ms = release_ms
 
-        def calculate_ducking_envelope(self, speech_intervals: List[Tuple[float, float]], total_duration: float, attenuation_db: Optional[float] = None) -> List[Dict[str, Any]]:
+        def calculate_ducking_envelope(self, speech_intervals: list[tuple[float, float]], total_duration: float, attenuation_db: float | None = None) -> list[dict[str, Any]]:
             atten_db = self.default_ducking_db if attenuation_db is None else attenuation_db
             ducked_gain = math.pow(10.0, atten_db / 20.0)
             envelope = []
@@ -338,7 +332,7 @@ except ImportError:
                 envelope.append({"time": total_duration, "gain": 1.0})
             return envelope
 
-        def apply_ducking(self, bgm_path: str, speech_intervals: List[Tuple[float, float]], attenuation_db: Optional[float] = None, output_path: Optional[str] = None) -> str:
+        def apply_ducking(self, bgm_path: str, speech_intervals: list[tuple[float, float]], attenuation_db: float | None = None, output_path: str | None = None) -> str:
             if not bgm_path or not isinstance(bgm_path, str):
                 raise ValueError("BGM path must be a valid non-empty string.")
             out_file = output_path or "/tmp/ducked_bgm.wav"
@@ -352,13 +346,13 @@ except ImportError:
         duration: float
         ducking_applied: bool
         channels: int = 2
-        metadata: Dict[str, Any] = field(default_factory=dict)
+        metadata: dict[str, Any] = field(default_factory=dict)
 
     class AudioMixer:
-        def __init__(self, ducking_engine: Optional[AudioDuckingEngine] = None) -> None:
+        def __init__(self, ducking_engine: AudioDuckingEngine | None = None) -> None:
             self.ducking_engine = ducking_engine or AudioDuckingEngine()
 
-        def mix_tracks(self, speech_tracks: Optional[List[str]] = None, bgm_track: Optional[str] = None, sfx_tracks: Optional[List[str]] = None, speech_intervals: Optional[List[Tuple[float, float]]] = None, ducking_config: Optional[Dict[str, Any]] = None, output_path: Optional[str] = None) -> MixedAudioResult:
+        def mix_tracks(self, speech_tracks: list[str] | None = None, bgm_track: str | None = None, sfx_tracks: list[str] | None = None, speech_intervals: list[tuple[float, float]] | None = None, ducking_config: dict[str, Any] | None = None, output_path: str | None = None) -> MixedAudioResult:
             atten = (ducking_config or {}).get("attenuation_db", -12.0)
             ducked = False
             if bgm_track and speech_intervals:
@@ -372,12 +366,12 @@ except ImportError:
     @dataclass
     class OrchestrationRequest:
         prompt: str
-        character_ids: List[str] = field(default_factory=list)
-        environment_id: Optional[str] = None
-        script_events: List[Dict[str, Any]] = field(default_factory=list)
+        character_ids: list[str] = field(default_factory=list)
+        environment_id: str | None = None
+        script_events: list[dict[str, Any]] = field(default_factory=list)
         aspect_ratio: str = "16:9"
         duration: float = 5.0
-        bgm_path: Optional[str] = None
+        bgm_path: str | None = None
         ducking_db: float = -12.0
         output_dir: str = "/tmp"
 
@@ -389,7 +383,7 @@ except ImportError:
         final_output_path: str
         duration: float
         status: str = "completed"
-        metadata: Dict[str, Any] = field(default_factory=dict)
+        metadata: dict[str, Any] = field(default_factory=dict)
 
     class LocalMediaOrchestrator:
         def __init__(self, video_driver=None, tts_driver=None, subtitle_gen=None, audio_mixer=None, ffmpeg_renderer=None) -> None:
@@ -526,7 +520,7 @@ def test_tier1_ffmpeg_visual_padding_letterboxing():
         padding=True,
     )
 
-    cmd_str = " ".join(cmd)
+    " ".join(cmd)
     assert "-vf" in cmd
     vf_idx = cmd.index("-vf")
     vf_val = cmd[vf_idx + 1]
@@ -883,12 +877,12 @@ def test_tier2_extreme_ducking_attenuation_thresholds():
 
     # 1. Extreme attenuation -60dB (near total silence)
     env_silence = engine.calculate_ducking_envelope(intervals, total_duration=5.0, attenuation_db=-60.0)
-    speech_gain_60 = [k["gain"] for k in env_silence if k["time"] == 1.0][0]
+    speech_gain_60 = next(k["gain"] for k in env_silence if k["time"] == 1.0)
     assert speech_gain_60 < 0.002  # 10^(-60/20) = 0.001
 
     # 2. Zero attenuation 0dB (no volume reduction)
     env_zero = engine.calculate_ducking_envelope(intervals, total_duration=5.0, attenuation_db=0.0)
-    speech_gain_0 = [k["gain"] for k in env_zero if k["time"] == 1.0][0]
+    speech_gain_0 = next(k["gain"] for k in env_zero if k["time"] == 1.0)
     assert math.isclose(speech_gain_0, 1.0, rel_tol=1e-3)
 
 

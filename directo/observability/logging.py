@@ -20,10 +20,11 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from loguru import logger
 
@@ -31,7 +32,11 @@ from loguru import logger
 correlation_id_var: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
 # Additional context (job_id, user_id, etc.) that gets injected into every log.
-_context_stack: ContextVar[dict[str, Any]] = ContextVar("directo_context", default={})
+# Use None default to avoid sharing a mutable dict across all callsites
+# (B039); consumers must handle the None case.
+_context_stack: ContextVar[dict[str, Any] | None] = ContextVar(
+    "directo_context", default=None
+)
 
 # Basic redaction — extend as needed.
 _REDACT_PATTERNS = [
@@ -66,7 +71,7 @@ def _json_sink(message: Any) -> None:
     extras = {k: _redact(v) if isinstance(v, str) else v for k, v in extras.items()}
     payload.update(extras)
     # Inject contextvar-based context.
-    ctx = _context_stack.get()
+    ctx = _context_stack.get() or {}
     cid = correlation_id_var.get()
     if cid:
         payload.setdefault("correlation_id", cid)
@@ -153,7 +158,8 @@ def bind_context(**kwargs: Any) -> Iterator[None]:
         >>> with bind_context(job_id=42, project="short_film"):
         ...     log.info("starting render")
     """
-    token = _context_stack.set({**_context_stack.get(), **kwargs})
+    current = _context_stack.get() or {}
+    token = _context_stack.set({**current, **kwargs})
     try:
         yield
     finally:

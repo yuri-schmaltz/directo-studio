@@ -26,9 +26,9 @@ import sqlite3
 import threading
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Self
 
 from directo.observability import get_logger
 
@@ -252,8 +252,8 @@ class LatentSpaceExplorer:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "LatentSpaceExplorer":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()

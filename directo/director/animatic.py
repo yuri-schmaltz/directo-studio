@@ -20,14 +20,13 @@ video rendering uses ``ffmpeg`` via subprocess.
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
-import time
 import uuid
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Protocol
+from typing import Any, Protocol
 
 from directo.observability import get_logger
 
@@ -313,8 +312,7 @@ class AIVideoBackend:
                 with httpx.stream("GET", video_url) as r:
                     r.raise_for_status()
                     with open(output_path, "wb") as f:
-                        for chunk in r.iter_bytes():
-                            f.write(chunk)
+                        f.writelines(r.iter_bytes())
             else:
                 shutil.copy(video_url, output_path)
             

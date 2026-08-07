@@ -15,6 +15,13 @@ from directo.director.agent import (
     ProjectMemory,
     StyleGuide,
 )
+from directo.director.animatic import (
+    AIVideoBackend,
+    AnimaticBuilder,
+    AnimaticClip,
+    AnimaticProject,
+    from_gallery,
+)
 from directo.director.backends import TemplateBackend, make_backend
 from directo.director.moodboard import (
     MoodAnchor,
@@ -25,24 +32,29 @@ from directo.director.slerp import (
     LatentSpaceExplorer,
     SlerpGrid,
 )
-from directo.director.animatic import (
-    AnimaticBuilder,
-    AnimaticClip,
-    AnimaticProject,
-    AIVideoBackend,
-    from_gallery,
-)
 
 __all__ = [
-    # agent
-    "Character", "CreativeDirector", "Decision", "LLMBackend",
-    "ProjectMemory", "StyleGuide",
-    # backends
-    "TemplateBackend", "make_backend",
-    # moodboard
-    "MoodAnchor", "Moodboard", "MoodboardBuilder",
-    # slerp
-    "LatentSpaceExplorer", "SlerpGrid",
+    "AIVideoBackend",
     # animatic
-    "AnimaticBuilder", "AnimaticClip", "AnimaticProject", "AIVideoBackend", "from_gallery",
+    "AnimaticBuilder",
+    "AnimaticClip",
+    "AnimaticProject",
+    # agent
+    "Character",
+    "CreativeDirector",
+    "Decision",
+    "LLMBackend",
+    # slerp
+    "LatentSpaceExplorer",
+    # moodboard
+    "MoodAnchor",
+    "Moodboard",
+    "MoodboardBuilder",
+    "ProjectMemory",
+    "SlerpGrid",
+    "StyleGuide",
+    # backends
+    "TemplateBackend",
+    "from_gallery",
+    "make_backend",
 ]

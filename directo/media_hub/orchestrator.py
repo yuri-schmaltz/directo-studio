@@ -1,11 +1,10 @@
 """LocalMediaOrchestrator async facade connecting video, voice, subtitle, and audio engines."""
 
 import asyncio
-from dataclasses import dataclass, field
 import os
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any
 
-from directo.media_hub.audio.ducking import AudioDuckingEngine
 from directo.media_hub.audio.mixer import AudioMixer
 from directo.media_hub.subtitles.whisper import WhisperSubtitleGenerator
 from directo.media_hub.video.ffmpeg import FFmpegRenderer
@@ -16,12 +15,12 @@ from directo.media_hub.voices.mock import MockTTSDriver
 @dataclass
 class OrchestrationRequest:
     prompt: str
-    character_ids: List[str] = field(default_factory=list)
-    environment_id: Optional[str] = None
-    script_events: List[Dict[str, Any]] = field(default_factory=list)
+    character_ids: list[str] = field(default_factory=list)
+    environment_id: str | None = None
+    script_events: list[dict[str, Any]] = field(default_factory=list)
     aspect_ratio: str = "16:9"
     duration: float = 5.0
-    bgm_path: Optional[str] = None
+    bgm_path: str | None = None
     ducking_db: float = -12.0
     output_dir: str = "/tmp"
 
@@ -34,7 +33,7 @@ class OrchestrationResult:
     final_output_path: str
     duration: float
     status: str = "completed"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class LocalMediaOrchestrator:

@@ -19,6 +19,36 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e . fastapi uvicorn click httpx websockets streamlit pytest pytest-asyncio
+      # Smoke-import every public entry point. Quality gates that run as
+      # scripts (lint, i18n_audit, etc.) do not catch ImportError
+      # regressions — they only fail when someone actually does
+      # `import <package>`. This is the same lesson learned the hard way
+      # with the pires-forge v1.3.0 / v1.3.1 / v1.3.2 chain of import
+      # crashes: a smoke-import step costs ~5s and catches the whole
+      # class of bugs (missing `_` alias in i18n shims, Gtk 3/4 removed
+      # methods, modules referenced in manifests/entry-points that no
+      # longer exist). See:
+      #   https://github.com/yuri-schmaltz/pires-forge/releases/tag/v1.3.2
+      - name: Smoke import (catches missing exports like pires-forge v1.3.0 bug)
+        run: |
+          set -e
+          python -c "import directo; assert 'directo' in dir(), 'public package missing'"
+          python -c "from directo import (
+              CinemaEngine, parse_script_text, Scene,
+              PersistentQueue, Gallery, CredentialVault,
+              MetricsCollector, configure_logging, get_logger,
+          ); print('public API: OK')"
+          python -c "from directo.style_bible import StyleBible, PromptBuilder, StyleBibleStore; print('style_bible: OK')"
+          python -c "from directo.media_hub import LocalMediaOrchestrator; print('media_hub: OK')"
+          python -c "from directo.platform import (
+              BackupManager, MultiBackup,
+              CacheLayer, ImageCache, PromptCache,
+              Event, EventBus, EventKind, WebhookManager,
+              Migration, MigrationManager,
+              PluginHooks, register_migrations,
+          ); print('platform: OK')"
+          python -c "from directo.platform.api import create_app; from directo.platform.cli import main; print('app + cli: OK')"
+          python -c "from directo.engine.openmontage_bridge import OPENMONTAGE_PIPELINES; assert len(OPENMONTAGE_PIPELINES) >= 1; print(f'openmontage: {len(OPENMONTAGE_PIPELINES)} pipelines')"
       - name: Run tests
         run: pytest --tb=short
 

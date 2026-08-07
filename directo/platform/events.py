@@ -29,9 +29,10 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 import httpx
 
@@ -79,7 +80,7 @@ class Event:
     correlation_id: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Event":
+    def from_dict(cls, data: dict[str, Any]) -> Event:
         """Build an Event from a dict (inverse of to_dict)."""
         return cls(
             kind=EventKind(data.get("kind", "custom")),

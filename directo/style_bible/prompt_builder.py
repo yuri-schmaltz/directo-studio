@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import re
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+from typing import Any
 
 from directo.style_bible.models import (
-    CharacterProfile,
-    EnvironmentAnchor,
-    LoRAConfig,
     StyleBible,
     StyleDirective,
 )
@@ -21,8 +18,8 @@ class PromptResult:
 
     positive_prompt: str
     negative_prompt: str
-    lora_settings: List[Dict[str, Any]] = field(default_factory=list)
-    seed_settings: Dict[str, Any] = field(default_factory=dict)
+    lora_settings: list[dict[str, Any]] = field(default_factory=list)
+    seed_settings: dict[str, Any] = field(default_factory=dict)
 
 
 def _normalize_prompt_string(text: str) -> str:
@@ -49,18 +46,18 @@ class PromptBuilder:
 
     def build_prompt(
         self,
-        character_ids: Optional[List[str]] = None,
-        environment_id: Optional[str] = None,
-        directive_id: Optional[str] = None,
+        character_ids: list[str] | None = None,
+        environment_id: str | None = None,
+        directive_id: str | None = None,
         action_prompt: str = "",
     ) -> PromptResult:
         """Build positive prompt, negative prompt, lora settings, and seed settings."""
-        pos_parts: List[str] = []
-        neg_parts: List[str] = []
-        collected_loras: List[Dict[str, Any]] = []
-        seed_settings: Dict[str, Any] = {"characters": {}}
+        pos_parts: list[str] = []
+        neg_parts: list[str] = []
+        collected_loras: list[dict[str, Any]] = []
+        seed_settings: dict[str, Any] = {"characters": {}}
 
-        directive: Optional[StyleDirective] = None
+        directive: StyleDirective | None = None
         if directive_id:
             directive = self.style_bible.get_directive(directive_id)
             if directive is None:
@@ -126,7 +123,7 @@ class PromptBuilder:
         if directive and directive.global_prompt_suffix:
             pos_parts.append(directive.global_prompt_suffix)
 
-        dedup_loras: List[Dict[str, Any]] = []
+        dedup_loras: list[dict[str, Any]] = []
         seen_lora_names = set()
         for l in collected_loras:
             if l["name"] not in seen_lora_names:

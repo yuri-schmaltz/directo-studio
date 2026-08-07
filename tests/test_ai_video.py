@@ -2,13 +2,14 @@
 
 import sys
 from pathlib import Path
+
 import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from directo.director.animatic import AIVideoBackend, AnimaticClip, AnimaticProject, AnimaticBuilder
-from directo.queue import PersistentQueue, Job
+from directo.director.animatic import AIVideoBackend, AnimaticClip
+
 
 def test_ai_video_backend_mock(tmp_path):
     # Create a dummy source image
@@ -34,6 +35,7 @@ def api_client(tmp_path):
     pytest.importorskip("fastapi")
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
+
     from directo.platform.api import create_app
     app = create_app(db_dir=tmp_path)
     return TestClient(app)

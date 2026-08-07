@@ -1,8 +1,7 @@
 """AudioMixer for multi-track mixing and sidechain ducking integration."""
 
 from dataclasses import dataclass, field
-import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from directo.media_hub.audio.ducking import AudioDuckingEngine
 
@@ -13,23 +12,23 @@ class MixedAudioResult:
     duration: float
     ducking_applied: bool
     channels: int = 2
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class AudioMixer:
     """Manages multi-track audio mixing (speech, background music, sound effects) with sidechain ducking."""
 
-    def __init__(self, ducking_engine: Optional[AudioDuckingEngine] = None) -> None:
+    def __init__(self, ducking_engine: AudioDuckingEngine | None = None) -> None:
         self.ducking_engine = ducking_engine or AudioDuckingEngine()
 
     def mix_tracks(
         self,
-        speech_tracks: Optional[List[str]] = None,
-        bgm_track: Optional[str] = None,
-        sfx_tracks: Optional[List[str]] = None,
-        speech_intervals: Optional[List[Tuple[float, float]]] = None,
-        ducking_config: Optional[Dict[str, Any]] = None,
-        output_path: Optional[str] = None,
+        speech_tracks: list[str] | None = None,
+        bgm_track: str | None = None,
+        sfx_tracks: list[str] | None = None,
+        speech_intervals: list[tuple[float, float]] | None = None,
+        ducking_config: dict[str, Any] | None = None,
+        output_path: str | None = None,
     ) -> MixedAudioResult:
         speech_tracks = speech_tracks or []
         sfx_tracks = sfx_tracks or []
@@ -42,7 +41,7 @@ class AudioMixer:
 
         if bgm_track and speech_intervals:
             # Apply sidechain compression ducking to BGM
-            ducked_bgm = self.ducking_engine.apply_ducking(
+            self.ducking_engine.apply_ducking(
                 bgm_path=bgm_track,
                 speech_intervals=speech_intervals,
                 attenuation_db=attenuation_db,

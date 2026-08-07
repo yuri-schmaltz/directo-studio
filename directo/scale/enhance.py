@@ -50,7 +50,7 @@ TargetModel = Literal[
 ]
 
 # Provider registry — populated lazily.
-_REGISTRY: dict[str, "type[LLMProvider]"] = {}
+_REGISTRY: dict[str, type[LLMProvider]] = {}
 
 
 # =====================================================================

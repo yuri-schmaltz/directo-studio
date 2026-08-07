@@ -27,9 +27,9 @@ import sqlite3
 import threading
 import time
 from collections import OrderedDict
-from dataclasses import dataclass
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from directo.observability import get_logger
 
@@ -224,7 +224,7 @@ class ImageCache:
     def _migrate(self) -> None:
         with self._lock:
             self._conn.executescript(
-                f"""
+                """
                 CREATE TABLE IF NOT EXISTS phash_index (
                     prefix   TEXT NOT NULL,
                     phash    TEXT NOT NULL,

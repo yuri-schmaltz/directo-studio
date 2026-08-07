@@ -27,7 +27,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Self
 
 from directo.observability import get_logger
 
@@ -61,7 +61,7 @@ class Panel:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Panel":
+    def from_dict(cls, data: dict[str, Any]) -> Panel:
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
@@ -89,7 +89,7 @@ class StoryboardCanvas:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "StoryboardCanvas":
+    def from_dict(cls, data: dict[str, Any]) -> StoryboardCanvas:
         panels_data = data.pop("panels", {})
         if isinstance(panels_data, list):
             panels_data = {p["id"]: p for p in panels_data if isinstance(p, dict) and "id" in p}
@@ -264,8 +264,8 @@ class CanvasStore:
         with self._lock:
             self._conn.close()
 
-    def __enter__(self) -> "CanvasStore":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()

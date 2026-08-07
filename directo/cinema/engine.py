@@ -24,15 +24,10 @@ Users can add their own rules via :meth:`CinemaEngine.add_rule`.
 from __future__ import annotations
 
 import enum
-import json
 import re
-import sqlite3
-import threading
-import time
-import uuid
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Any, Callable, Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from directo.observability import get_logger
 

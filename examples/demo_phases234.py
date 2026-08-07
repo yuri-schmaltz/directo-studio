@@ -36,7 +36,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PIL import Image, ImageDraw, ImageFont
 
 from directo import (
-    Gallery,
     ImageRecord,
     configure_logging,
     get_logger,
@@ -44,15 +43,12 @@ from directo import (
 from directo.cinema import (
     CanvasStore,
     CinemaEngine,
-    Panel,
     StoryboardCanvas,
     parse_fountain,
     scenes_to_prompts,
 )
 from directo.director import (
     AnimaticBuilder,
-    AnimaticClip,
-    AnimaticProject,
     Character,
     CreativeDirector,
     MoodboardBuilder,
@@ -64,10 +60,10 @@ from directo.scale import (
     NodeRegistry,
     PresetStore,
     PromptEnhancer,
-    TargetModel,
+)
+from directo.scale import (
     profile as vram_profile,
 )
-
 
 SAMPLE_SCRIPT = """Title: Dragon's Perch
 

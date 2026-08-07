@@ -14,8 +14,9 @@ Usage:
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any
 from uuid import uuid4
 
 from directo.observability.logging import get_logger
@@ -69,7 +70,7 @@ class Tracer:
         sp = Span(name, **attributes)
         try:
             yield sp
-        except BaseException as exc:  # noqa: BLE001
+        except BaseException as exc:
             sp.record_exception(exc)
             raise
         finally:

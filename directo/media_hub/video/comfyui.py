@@ -1,10 +1,9 @@
 """ComfyUI Video Driver and NodeRegistry implementation."""
 
 import json
-import time
-from typing import Any, Dict, List, Optional
-import urllib.request
 import urllib.error
+import urllib.request
+from typing import Any
 
 from directo.media_hub.video.base import VideoResult
 
@@ -46,13 +45,13 @@ def parse_aspect_ratio(aspect_ratio: str) -> tuple[int, int]:
 class NodeRegistry:
     """Routes video workflows to active ComfyUI node servers."""
 
-    def __init__(self, nodes: Optional[List[Dict[str, Any]]] = None) -> None:
+    def __init__(self, nodes: list[dict[str, Any]] | None = None) -> None:
         self.nodes = nodes or [
             {"id": "node_primary", "host": "127.0.0.1", "port": 8188, "capabilities": ["txt2vid", "img2vid"], "status": "active"},
             {"id": "node_secondary", "host": "127.0.0.1", "port": 8189, "capabilities": ["txt2vid"], "status": "active"},
         ]
 
-    def pick(self, capability: str = "txt2vid") -> Dict[str, Any]:
+    def pick(self, capability: str = "txt2vid") -> dict[str, Any]:
         """Select an active node supporting the requested capability."""
         active_nodes = [
             n for n in self.nodes
@@ -70,7 +69,7 @@ class ComfyUIVideoDriver:
         self,
         host: str = "127.0.0.1",
         port: int = 8188,
-        node_registry: Optional[NodeRegistry] = None,
+        node_registry: NodeRegistry | None = None,
         timeout: float = 30.0,
         offline_fallback: bool = False,
     ) -> None:
@@ -83,7 +82,7 @@ class ComfyUIVideoDriver:
     def generate_video(
         self,
         prompt: str,
-        loras: Optional[List[Dict[str, Any]]] = None,
+        loras: list[dict[str, Any]] | None = None,
         seed: int = 42,
         duration: float = 5.0,
         aspect_ratio: str = "16:9",
@@ -98,7 +97,7 @@ class ComfyUIVideoDriver:
             node = self.node_registry.pick("txt2vid")
             target_host = node.get("host", self.host)
             target_port = node.get("port", self.port)
-        except RuntimeError as e:
+        except RuntimeError:
             if self.offline_fallback:
                 return VideoResult(
                     video_path="/tmp/comfyui_fallback_output.mp4",
@@ -109,7 +108,7 @@ class ComfyUIVideoDriver:
                     status="completed_fallback",
                     metadata={"fallback": True, "prompt": prompt},
                 )
-            raise e
+            raise
 
         # Construct ComfyUI workflow JSON prompt payload
         workflow_prompt = {
@@ -176,7 +175,6 @@ class ComfyUIVideoDriver:
             raise ConnectionError(f"Failed to connect to ComfyUI node server at {target_host}:{target_port}: {err}") from err
 
         # Poll job status
-        status_url = f"http://{target_host}:{target_port}/history/{prompt_id}"
         video_output_path = f"/tmp/comfyui_job_{prompt_id}.mp4"
 
         return VideoResult(

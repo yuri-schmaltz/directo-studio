@@ -141,8 +141,8 @@ def main() -> None:
     # Decorated cached() pattern
     def expensive():
         return "computed result"
-    v1, hit1 = layer.prompts.cached("other-key", expensive)
-    v2, hit2 = layer.prompts.cached("other-key", expensive)
+    _v1, hit1 = layer.prompts.cached("other-key", expensive)
+    _v2, hit2 = layer.prompts.cached("other-key", expensive)
     print(f"  cached pattern: first miss={not hit1}, second hit={hit2}")
     # Image cache
     layer.images.add("0123456789abcdef0123456789abcdef", "img-1")
@@ -199,7 +199,7 @@ def main() -> None:
     h1 = load_plugin(my_house_style)
     h2 = load_plugin(another_plugin)
     print(f"  loaded: {len(loaded_plugins())} plugins")
-    print(f"  custom hooks:")
+    print("  custom hooks:")
     print(f"    house_style: {h1.get_custom('house_style')}")
     print(f"    slack_channel: {h2.get_custom('slack_channel')}")
     # Idempotency
@@ -216,6 +216,7 @@ def main() -> None:
     section("5.7 + 5.8 HTTP API + WebSocket")
     print("  starting API server in background thread...")
     import threading
+
     from directo.platform.api import create_app
 
     api_workspace = workspace / "api"
@@ -232,7 +233,7 @@ def main() -> None:
         if server.started:
             break
         time.sleep(0.1)
-    print(f"  ✓ server up at http://127.0.0.1:18765")
+    print("  ✓ server up at http://127.0.0.1:18765")
 
     # Smoke test
     import httpx
@@ -253,6 +254,7 @@ def main() -> None:
     # WebSocket test
     print("  testing WebSocket event stream...")
     import asyncio
+
     import websockets
 
     async def ws_test():
@@ -265,7 +267,7 @@ def main() -> None:
                 msg = await asyncio.wait_for(ws.recv(), timeout=2.0)
                 data = json.loads(msg)
                 received.append(data)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         return received
 
@@ -283,13 +285,14 @@ def main() -> None:
     # ============================================================
     section("5.9 CLI")
     print("  invoking: directo --db-dir <workspace> status --json")
-    from directo.platform.cli import build_cli
     from click.testing import CliRunner
+
+    from directo.platform.cli import build_cli
     runner = CliRunner()
     cli = build_cli()
     result = runner.invoke(cli, ["--db-dir", str(workspace), "--json", "status"])
     if result.exit_code == 0:
-        data = json.loads(result.output)
+        json.loads(result.output)
         print(f"  exit code: {result.exit_code}")
         print(f"  output (truncated): {result.output[:200]}...")
     else:
@@ -297,7 +300,7 @@ def main() -> None:
         print(f"  output: {result.output[:200]}")
     # gallery list
     result = runner.invoke(cli, ["--db-dir", str(workspace), "gallery", "list", "--limit", "5"])
-    print(f"\n  'gallery list' output:")
+    print("\n  'gallery list' output:")
     for line in result.output.strip().split("\n"):
         print(f"    {line}")
 

@@ -1,7 +1,7 @@
 """AudioDuckingEngine for sidechain compression during character narration."""
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 class AudioDuckingEngine:
@@ -19,10 +19,10 @@ class AudioDuckingEngine:
 
     def calculate_ducking_envelope(
         self,
-        speech_intervals: List[Tuple[float, float]],
+        speech_intervals: list[tuple[float, float]],
         total_duration: float,
-        attenuation_db: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        attenuation_db: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Calculates volume envelope keyframes for BGM track given speech intervals."""
         atten_db = self.default_ducking_db if attenuation_db is None else attenuation_db
 
@@ -60,9 +60,9 @@ class AudioDuckingEngine:
     def apply_ducking(
         self,
         bgm_path: str,
-        speech_intervals: List[Tuple[float, float]],
-        attenuation_db: Optional[float] = None,
-        output_path: Optional[str] = None,
+        speech_intervals: list[tuple[float, float]],
+        attenuation_db: float | None = None,
+        output_path: str | None = None,
     ) -> str:
         if not bgm_path or not isinstance(bgm_path, str):
             raise ValueError("BGM path must be a valid non-empty string.")
